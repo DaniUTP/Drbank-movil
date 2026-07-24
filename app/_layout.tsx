@@ -1,24 +1,29 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { Stack } from "expo-router";
+import { Provider } from "react-redux";
+import { ThemeProvider } from "../components/ThemeContext";
+import { store } from "../store";
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
+// ============================================
+// ROOT LAYOUT - Main entry point
+// Wraps entire app with ThemeProvider and Redux Provider
+// With autohide in app.json, splash will hide automatically
+// ============================================
+function RootLayoutComponent() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Provider store={store}>
+      <ThemeProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            // Disable all animations for instant transitions
+            animation: 'none',
+            // Prevent white flash - same background as splash
+            contentStyle: { backgroundColor: '#f8fafc' },
+          }}
+        />
+      </ThemeProvider>
+    </Provider>
   );
 }
+
+export default RootLayoutComponent;
