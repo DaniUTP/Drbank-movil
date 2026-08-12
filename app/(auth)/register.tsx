@@ -1,4 +1,4 @@
-import RegisterScreen from "@/screens/RegisterScreen";
+import RegisterScreen from "@/screens/Register";
 
 export default function RegisterRoute() {
   return <RegisterScreen />;

@@ -4,5 +4,6 @@ export const enum TagTypes {
   Orders = 'Orders',
   Transactions = 'Transactions',
   Accounts = 'Accounts',
+  Profile = 'Profile',
   // Agregar más tags según necesites
 }

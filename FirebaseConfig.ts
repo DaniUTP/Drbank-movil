@@ -1,9 +1,14 @@
-// React Native Firebase SDK
-import messaging, { AuthorizationStatus } from '@react-native-firebase/messaging';
+// React Native Firebase SDK - Modular API (v22+)
+import { getApp } from '@react-native-firebase/app';
+import { AuthorizationStatus, getMessaging, getToken, onMessage, requestPermission, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import { Alert, PermissionsAndroid, Platform } from 'react-native';
 
+// Get messaging instance using modular API
+const app = getApp();
+const messaging = getMessaging(app);
+
 // Background message handler - Firebase maneja automáticamente las notificaciones en background/quit
-messaging().setBackgroundMessageHandler(async remoteMessage => {
+setBackgroundMessageHandler(messaging, async remoteMessage => {
   console.log('Message handled in the background!', remoteMessage);
   // Firebase mostrará automáticamente la notificación si tiene payload de notification
 });
@@ -24,7 +29,7 @@ export async function requestUserPermission(): Promise<number> {
 
   // Solicitar permiso de Firebase Messaging
   console.log('Requesting FCM notification permission...');
-  const authStatus = await messaging().requestPermission();
+  const authStatus = await requestPermission(messaging);
   console.log('Permission request result:', authStatus);
 
   if (authStatus === AuthorizationStatus.AUTHORIZED || authStatus === AuthorizationStatus.PROVISIONAL) {
@@ -38,7 +43,7 @@ export async function requestUserPermission(): Promise<number> {
 // Get FCM token
 export async function getFCMToken() {
   try {
-    const token = await messaging().getToken();
+    const token = await getToken(messaging);
     if (token) {
       console.log('FCM Token:', token);
       return token;
@@ -49,9 +54,9 @@ export async function getFCMToken() {
   return null;
 }
 
-// Listen for incoming messages
+// Listen for incoming messages - Using modular API
 export function setupMessageListener() {
-  const unsubscribe = messaging().onMessage(async (remoteMessage) => {
+  const unsubscribe = onMessage(messaging, async remoteMessage => {
     console.log('Received FCM message:', remoteMessage);
 
     // Display local notification when app is in foreground

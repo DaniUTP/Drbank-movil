@@ -1,3 +1,3 @@
-import CalendarDetailScreen from "../screens/CalendarDetailScreen";
+import CalendarDetailScreen from "../screens/CalendarDetail";
 
 export default CalendarDetailScreen;

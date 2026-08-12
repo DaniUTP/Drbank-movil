@@ -1,3 +1,3 @@
-import QuestionsScreen from "../screens/QuestionsScreen";
+import QuestionsScreen from "../screens/Questions";
 
 export default QuestionsScreen;

@@ -1,6 +1,6 @@
-import { useTheme } from "@/components/ThemeContext";
+import { useTheme } from "@/common/ThemeContext";
 import { useRouter } from "expo-router";
-import { Calendar, FileText, Headphones, MessageCircle, X } from "lucide-react-native";
+import { Brain, Calendar, Headphones, X } from "lucide-react-native";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function AddScreen() {
@@ -9,20 +9,15 @@ export default function AddScreen() {
 
   const handleOptionPress = (option: string) => {
     switch (option) {
-      case "chat":
-        // Navigate to chat with Drbankito
-        router.push("/chat-agent");
-        break;
       case "support":
         // Navigate to support screen
         router.push("/support");
         break;
-      case "simulacre":
-        // Navigate to personalized simulacro screen
-        router.push("/simulacro-personalizado");
-        break;
       case "calendar":
         router.push("/calendar-detail");
+        break;
+      case "download":
+        router.push("/download-exams");
         break;
     }
   };
@@ -51,23 +46,6 @@ export default function AddScreen() {
 
               <TouchableOpacity
               style={[styles.option, { backgroundColor: colors.background }]}
-              onPress={() => handleOptionPress("chat")}
-            >
-              <View style={[styles.iconContainer, { backgroundColor: "#e0e7ff" }]}>
-                <MessageCircle size={24} color="#4f46e5" />
-              </View>
-              <View style={styles.optionTextContainer}>
-                <Text style={[styles.optionTitle, { color: colors.text }]}>
-                  Chatea con Drbankito
-                </Text>
-                <Text style={[styles.optionSubtitle, { color: colors.subtitle }]}>
-                  Resuelve tus dudas con IA
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.option, { backgroundColor: colors.background }]}
               onPress={() => handleOptionPress("calendar")}
             >
               <View style={[styles.iconContainer, { backgroundColor: "#dcfce7" }]}>
@@ -79,6 +57,23 @@ export default function AddScreen() {
                 </Text>
                 <Text style={[styles.optionSubtitle, { color: colors.subtitle }]}>
                   Ver y agregar eventos al calendario
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.option, { backgroundColor: colors.background }]}
+              onPress={() => handleOptionPress("download")}
+            >
+              <View style={[styles.iconContainer, { backgroundColor: "#dbeafe" }]}>
+                <Brain size={24} color="#0284c7" />
+              </View>
+              <View style={styles.optionTextContainer}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>
+                  Descarga de exámenes
+                </Text>
+                <Text style={[styles.optionSubtitle, { color: colors.subtitle }]}>
+                  Descarga exámenes para practicar
                 </Text>
               </View>
             </TouchableOpacity>
@@ -100,22 +95,7 @@ export default function AddScreen() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.option, { backgroundColor: colors.background }]}
-              onPress={() => handleOptionPress("simulacre")}
-            >
-              <View style={[styles.iconContainer, { backgroundColor: "#dbeafe" }]}>
-                <FileText size={24} color="#0284c7" />
-              </View>
-              <View style={styles.optionTextContainer}>
-                <Text style={[styles.optionTitle, { color: colors.text }]}>
-                  Genera simulacro por Drbankito
-                </Text>
-                <Text style={[styles.optionSubtitle, { color: colors.subtitle }]}>
-                  Crea un nuevo simulacro inteligente
-                </Text>
-              </View>
-            </TouchableOpacity>
+
             </ScrollView>
           </View>
         </Pressable>

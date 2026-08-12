@@ -7,10 +7,10 @@ export default function Index() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
-    // Retrasar la inicialización de Firebase para evitar crash al inicio
+    // Delay Firebase initialization to avoid crash on startup
     const initializeApp = async () => {
       try {
-        // Importar Firebase dinámicamente para evitar problemas de inicialización
+        // Import Firebase dynamically to avoid initialization issues
         const FirebaseConfig = await import("../FirebaseConfig");
         const { requestUserPermission, getFCMToken, setupMessageListener } = FirebaseConfig;
         const { AuthorizationStatus } = await import("@react-native-firebase/messaging");
@@ -18,25 +18,25 @@ export default function Index() {
         const authStatus = await requestUserPermission();
 
         if (authStatus === AuthorizationStatus.AUTHORIZED || authStatus === AuthorizationStatus.PROVISIONAL) {
-          console.log("Permisos de notificación concedidos");
+          console.log("Notification permissions granted");
 
           const token = await getFCMToken();
           if (token) {
-            console.log("FCM Token obtenido:", token);
+            console.log("FCM Token obtained:", token);
           }
 
           unsubscribe = setupMessageListener();
         } else {
-          console.log("Permisos de notificación denegados");
+          console.log("Notification permissions denied");
         }
       } catch (error) {
-        console.error("Error configurando FCM:", error);
+        console.error("Error configuring FCM:", error);
       } finally {
         setIsReady(true);
       }
     };
 
-    // Pequeño retraso para asegurar que la app esté completamente cargada
+    // Small delay to ensure app is fully loaded
     const timer = setTimeout(() => {
       initializeApp();
     }, 1000);

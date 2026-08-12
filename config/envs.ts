@@ -20,7 +20,7 @@ const getEnvVar = (key: string, defaultValue?: string): string => {
 
 export const envs = {
   // API Configuration
-  API_BASE_URL: getEnvVar('API_BASE_URL'),
+  API_BASE_URL: getEnvVar('API_BASE_URL','http://10.0.2.2:8000/api/v1'),
   API_TIMEOUT: getEnvVar('API_TIMEOUT', '30000'),
 
   // App Configuration

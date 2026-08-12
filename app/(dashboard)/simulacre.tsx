@@ -1,4 +1,4 @@
-import SimulacreScreen from "@/screens/SimulacreScreen";
+import SimulacreScreen from "@/screens/Simulacre";
 
 export default function Simulacre() {
   return <SimulacreScreen/>

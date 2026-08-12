@@ -1,9 +1,10 @@
-import type { ThemeColors } from "@/components/ThemeContext";
-import { useTheme } from "@/components/ThemeContext";
+import Modal from "@/common/Modal";
+import type { ThemeColors } from "@/common/ThemeContext";
+import { useTheme } from "@/common/ThemeContext";
 import { Image } from "expo-image";
 import { Slot, usePathname, useRouter, useSegments } from "expo-router";
 import { Moon, Sun } from "lucide-react-native";
-import React, { memo, useCallback, useEffect, useRef } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -242,6 +243,55 @@ const AnimatedDot = memo(function AnimatedDot({
 });
 
 // ============================================
+// AUTH MODAL COMPONENT
+// ============================================
+function AuthModal() {
+  const { colors } = useTheme();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalLogoSource, setModalLogoSource] = useState<any>(null);
+  const [onModalClose, setOnModalClose] = useState<(() => void) | null>(null);
+
+  // Expose modal functions globally via window
+  useEffect(() => {
+    (global as any).showAuthModal = (title: string, message: string, logoSource?: any, onClose?: () => void) => {
+      // Use setTimeout to avoid setState during render
+      setTimeout(() => {
+        setModalTitle(title);
+        setModalMessage(message);
+        setModalLogoSource(logoSource || null);
+        setOnModalClose(onClose || null);
+        setModalVisible(true);
+      }, 0);
+    };
+    (global as any).hideAuthModal = () => {
+      setModalVisible(false);
+    };
+  }, []);
+
+  const handleClose = () => {
+    setModalVisible(false);
+    if (onModalClose) {
+      onModalClose();
+    }
+  };
+
+  return (
+    <Modal
+      visible={modalVisible}
+      onClose={handleClose}
+      title={modalTitle}
+      logoSource={modalLogoSource}
+    >
+      <Text style={{ color: colors.text, fontSize: 16, textAlign: "center", lineHeight: 24 }}>
+        {modalMessage}
+      </Text>
+    </Modal>
+  );
+}
+
+// ============================================
 // MAIN LAYOUT CONTENT
 // ============================================
 function LayoutContent() {
@@ -292,6 +342,9 @@ function LayoutContent() {
           <Slot />
         </View>
       </View>
+
+      {/* Auth Modal */}
+      <AuthModal />
     </SafeAreaView>
   );
 }

@@ -1,6 +1,6 @@
-import { useTheme } from "@/components/ThemeContext";
+import { useTheme } from "@/common/ThemeContext";
 import { Tabs, usePathname, useRouter } from "expo-router";
-import { BarChart3, Calendar, ChevronRight, FileText, Headphones, Home, Layers, MessageCircle, Plus, User, X } from "lucide-react-native";
+import { BarChart3, Brain, Calendar, ChevronRight, Headphones, Home, Layers, Plus, User, X } from "lucide-react-native";
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -52,7 +52,7 @@ const MenuOption = memo(function MenuOption({
 // ============================================
 // FLOATING MENU COMPONENT
 // ============================================
-type RouteType = "/chat-agent" | "/simulacre-generator" | "/calendar-detail" | "/historial-exam" | "/support" | "/simulacro-personalizado";
+type RouteType = "/calendar-detail" | "/history-exam" | "/support" | "/download-exams";
 
 interface FloatingMenuProps {
   isOpen: boolean;
@@ -101,17 +101,14 @@ const FloatingMenu = memo(function FloatingMenu({
   const handleOptionPress = useCallback((option: string) => {
     onClose();
     switch (option) {
-      case "chat":
-        onNavigate("/chat-agent");
-        break;
       case "support":
         onNavigate("/support");
         break;
-      case "simulacre":
-        onNavigate("/simulacro-personalizado");
-        break;
       case "calendar":
-        onNavigate("/historial-exam");
+        onNavigate("/history-exam");
+        break;
+      case "download":
+        onNavigate("/download-exams");
         break;
     }
   }, [onClose, onNavigate] as const);
@@ -139,14 +136,6 @@ const FloatingMenu = memo(function FloatingMenu({
         >
           <View style={styles.optionsList}>
             <MenuOption
-              bgColor="#e0e7ff"
-              iconBg="#4f46e5"
-              icon={<MessageCircle size={24} color="white" />}
-              title="Chatea con Drbankito"
-              description="Resuelve tus dudas con IA"
-              onPress={() => handleOptionPress("chat")}
-            />
-            <MenuOption
               bgColor="#f0fdf4"
               iconBg="#16a34a"
               icon={<Calendar size={24} color="white" />}
@@ -155,20 +144,20 @@ const FloatingMenu = memo(function FloatingMenu({
               onPress={() => handleOptionPress("calendar")}
             />
             <MenuOption
+              bgColor="#dbeafe"
+              iconBg="#0284c7"
+              icon={<Brain size={24} color="white" />}
+              title="Descarga de exámenes"
+              description="Descarga exámenes para practicar"
+              onPress={() => handleOptionPress("download")}
+            />
+            <MenuOption
               bgColor="#fdf2f8"
               iconBg="#db2777"
               icon={<Headphones size={24} color="white" />}
               title="Soporte"
               description="¿Necesitas ayuda?"
               onPress={() => handleOptionPress("support")}
-            />
-            <MenuOption
-              bgColor="#f0f9ff"
-              iconBg="#0284c7"
-              icon={<FileText size={24} color="white" />}
-              title="Genera simulacro por Drbankito"
-              description="Crea un simulacro inteligente"
-              onPress={() => handleOptionPress("simulacre")}
             />
           </View>
         </ScrollView>
@@ -279,9 +268,9 @@ function TabLayoutContent() {
           }}
         />
         <Tabs.Screen
-          name="metric"
+          name="performance"
           options={{
-            title: "Métricas",
+            title: "Rendimiento",
             tabBarIcon: ({ color }) => <BarChart3 size={22} color={color} />,
           }}
         />

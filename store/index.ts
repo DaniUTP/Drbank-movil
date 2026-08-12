@@ -1,4 +1,8 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
+import '../services/auth/activate-account.rtkq'; // Import to register endpoints
+import '../services/auth/login.rtkq'; // Import to register endpoints
+import '../services/auth/recovery.rtkq'; // Import to register endpoints
+import '../services/profile/profile.rtkq'; // Import to register endpoints
 import { api } from './api';
 
 const rootReducer = combineReducers({

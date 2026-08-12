@@ -7,10 +7,6 @@ export const api = createApi({
   endpoints: () => ({}),
   reducerPath: 'api',
   tagTypes: [
-    TagTypes.User,
-    TagTypes.Products,
-    TagTypes.Orders,
-    TagTypes.Transactions,
-    TagTypes.Accounts,
+    TagTypes.Profile,
   ],
 });

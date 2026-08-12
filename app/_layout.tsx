@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 import { Provider } from "react-redux";
-import { ThemeProvider } from "../components/ThemeContext";
+import { ThemeProvider } from "../common/ThemeContext";
 import { store } from "../store";
 
 // ============================================

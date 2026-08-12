@@ -1,0 +1,151 @@
+import { StyleSheet } from "react-native";
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  statsContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    gap: 10,
+    marginBottom: 20,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 14,
+    alignItems: "center",
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginTop: 6,
+  },
+  statLabel: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginHorizontal: 16,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  examCard: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  examIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  examInfo: {
+    flex: 1,
+  },
+  examType: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  examMeta: {
+    fontSize: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  examScoreContainer: {
+    alignItems: "flex-end",
+  },
+  examScore: {
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  examQuestions: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  filterTabs: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    gap: 8,
+  },
+  filterTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  filterTabText: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 60,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginTop: 12,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    marginTop: 4,
+  },
+});
