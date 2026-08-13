@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { memo, useCallback, useMemo } from "react";
 import {
@@ -9,9 +8,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CircularProgress from "../../common/CircularProgress";
+import DashboardHeader from "../../common/DashboardHeader";
 import StatCard from "../../common/StatCard";
 import { useTheme } from "../../common/ThemeContext";
-import { useProfileQuery } from "../../services/profile/profile.rtkq";
 import { styles } from "./styles";
 
 import {
@@ -19,8 +18,8 @@ import {
   CalendarDays,
   Flame,
   Heart,
-  LayoutGrid, LucideIcon, Moon, Pill,
-  Sun,
+  LayoutGrid, LucideIcon,
+  Pill,
   TrendingUp
 } from "lucide-react-native";
 
@@ -113,9 +112,6 @@ function DashboardScreenComponent() {
   const { colors, darkMode, toggleDarkMode } = useTheme();
   const router = useRouter();
 
-  // Fetch user profile data
-  const { data: profileData, isLoading: isProfileLoading, error: profileError } = useProfileQuery();
-
   // Memoized navigation handler
   const handleDayPress = useCallback((date: number, isLibre: boolean) => {
     if (!isLibre) {
@@ -132,33 +128,7 @@ function DashboardScreenComponent() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView style={containerStyle} showsVerticalScrollIndicator={false}>
-        {/* HEADER */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Image 
-              source={{ uri: "https://i.pravatar.cc/150?img=3" }} 
-              style={styles.avatar}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
-            />
-            <View>
-              <Text style={[styles.greeting, { color: colors.subtitle }]}>
-                Buenos días,
-              </Text>
-              <Text style={[styles.username, { color: colors.text }]}>
-                {profileData ? `${profileData.name} ${profileData.last_name}` : 'Cargando...'}
-              </Text>
-            </View>
-          </View>
-          <Pressable onPress={toggleDarkMode} style={styles.notification}>
-            {darkMode ? (
-              <Sun size={22} color={colors.text} />
-            ) : (
-              <Moon size={22} color={colors.text} />
-            )}
-          </Pressable>
-        </View>
+        <DashboardHeader />
 
         {/* IA CARD */}
         <View style={styles.aiCard}>

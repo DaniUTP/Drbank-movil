@@ -1,5 +1,15 @@
+import { useAreaQuery } from "@/services/question/area.rtkq";
 import Slider from "@react-native-community/slider";
 import { useRouter } from "expo-router";
+import {
+  ArrowLeft,
+  Bell,
+  Check,
+  ChevronDown,
+  Search,
+  Settings,
+  X,
+} from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import {
   FlatList,
@@ -14,17 +24,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../common/ThemeContext";
+import { useExamTypeQuery } from "../../services/question/exam-type.rtkq";
+import { useSpecialtyQuery } from "../../services/question/specialty.rtkq";
+import { useThemeQuery as useQuizThemeQuery } from "../../services/question/theme.rtkq";
+import { useYearQuery } from "../../services/question/year.rtkq";
 import { styles } from "./styles";
-
-import {
-  ArrowLeft,
-  Bell,
-  Check,
-  ChevronDown,
-  Search,
-  Settings,
-  X,
-} from "lucide-react-native";
 
 export default function SimulacreGeneratorScreen() {
   const { colors } = useTheme();
@@ -32,6 +36,7 @@ export default function SimulacreGeneratorScreen() {
 
   // Form state
   const [examType, setExamType] = useState("");
+  const [area, setArea] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [theme, setTheme] = useState("");
   const [years, setYears] = useState("");
@@ -39,8 +44,22 @@ export default function SimulacreGeneratorScreen() {
   const [questionCount, setQuestionCount] = useState(20);
   const [timeLimit, setTimeLimit] = useState(30);
 
+  // API calls
+  const { data: examTypesData = [], isLoading: examTypesLoading } = useExamTypeQuery();
+  const { data: areasData = [], isLoading: areasLoading } = useAreaQuery();
+  const { data: yearsData = [], isLoading: yearsLoading } = useYearQuery();
+  
+  // Get specialties based on selected area
+  const selectedAreaId = areasData.find((a: any) => a.name === area)?.id || 0;
+  const { data: specialtiesData = [], isLoading: specialtiesLoading } = useSpecialtyQuery({ area: selectedAreaId }, { skip: !selectedAreaId });
+  
+  // Get themes based on selected specialty
+  const selectedSpecialtyId = specialtiesData.find((s: any) => s.name === specialty)?.id || 0;
+  const { data: themesData = [], isLoading: themesLoading } = useQuizThemeQuery({ specialty: selectedSpecialtyId }, { skip: !specialty });
+
   // Modal states
   const [showExamTypeModal, setShowExamTypeModal] = useState(false);
+  const [showAreaModal, setShowAreaModal] = useState(false);
   const [showSpecialtyModal, setShowSpecialtyModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showYearsModal, setShowYearsModal] = useState(false);
@@ -48,55 +67,18 @@ export default function SimulacreGeneratorScreen() {
 
   // Search states
   const [examTypeSearch, setExamTypeSearch] = useState("");
+  const [areaSearch, setAreaSearch] = useState("");
   const [specialtySearch, setSpecialtySearch] = useState("");
   const [themeSearch, setThemeSearch] = useState("");
   const [yearsSearch, setYearsSearch] = useState("");
   const [examModeSearch, setExamModeSearch] = useState("");
 
-  // Options
-  const examTypes = [
-    { id: "1", name: "Examen Ordinario" },
-    { id: "2", name: "Examen Extraordinario" },
-    { id: "3", name: "Simulacro de Práctica" },
-    { id: "4", name: "Evaluación Diagnóstica" },
-  ];
-
-  const specialties = [
-    { id: "1", name: "Cardiología" },
-    { id: "2", name: "Pediatría" },
-    { id: "3", name: "Medicina Interna" },
-    { id: "4", name: "Cirugía General" },
-    { id: "5", name: "Ginecología y Obstetricia" },
-    { id: "6", name: "Neurología" },
-    { id: "7", name: "Psiquiatría" },
-    { id: "8", name: "Dermatología" },
-    { id: "9", name: "Oftalmología" },
-    { id: "10", name: "Otorrinolaringología" },
-    { id: "11", name: "Urología" },
-    { id: "12", name: "Ortopedia y Traumatología" },
-    { id: "13", name: "Anestesiología" },
-    { id: "14", name: "Medicina de Emergencia" },
-    { id: "15", name: "Radiología" },
-    { id: "16", name: "Patología" },
-    { id: "17", name: "Farmacología" },
-    { id: "18", name: "Microbiología" },
-    { id: "19", name: "Anatomía Patológica" },
-    { id: "20", name: "Medicina Familiar" },
-  ];
-
-  const themes = [
-    { id: "1", name: "Generalidades" },
-    { id: "2", name: "Fisiopatología" },
-    { id: "3", name: "Diagnóstico y Tratamiento" },
-    { id: "4", name: "Casos Clínicos" },
-    { id: "5", name: "Farmacología Aplicada" },
-    { id: "6", name: "Prevención" },
-  ];
-
-  const availableYears = Array.from({ length: 15 }, (_, i) => {
-    const year = new Date().getFullYear() - i;
-    return { id: year.toString(), name: year.toString() };
-  });
+  // Transform API data to match expected format
+  const examTypes = examTypesData.map((item: any) => ({ id: item.exam, name: item.exam }));
+  const areas = areasData.map((item: any) => ({ id: item.id.toString(), name: item.name }));
+  const specialties = specialtiesData.map((item: any) => ({ id: item.id.toString(), name: item.name }));
+  const themes = themesData.map((item: any) => ({ id: item.id.toString(), name: item.theme }));
+  const availableYears = yearsData.map((item: any) => ({ id: item.year, name: item.year }));
 
   const examModes = [
     {
@@ -119,6 +101,12 @@ export default function SimulacreGeneratorScreen() {
       type.name.toLowerCase().includes(examTypeSearch.toLowerCase())
     );
   }, [examTypeSearch]);
+
+  const filteredAreas = useMemo(() => {
+    return areas.filter((a) =>
+      a.name.toLowerCase().includes(areaSearch.toLowerCase())
+    );
+  }, [areaSearch]);
 
   const filteredSpecialties = useMemo(() => {
     return specialties.filter((spec) =>
@@ -150,6 +138,14 @@ export default function SimulacreGeneratorScreen() {
     setExamTypeSearch("");
   };
 
+  const selectArea = (a: { id: string; name: string }) => {
+    setArea(a.name);
+    setShowAreaModal(false);
+    setAreaSearch("");
+    setSpecialty(""); // Reset specialty when area changes
+    setTheme(""); // Reset theme when area changes
+  };
+
   const selectSpecialty = (spec: { id: string; name: string }) => {
     setSpecialty(spec.name);
     setShowSpecialtyModal(false);
@@ -178,6 +174,18 @@ export default function SimulacreGeneratorScreen() {
         {item.name}
       </Text>
       {examType === item.name && <Check size={18} color="#0284c7" />}
+    </Pressable>
+  );
+
+  const renderAreaItem = ({ item }: { item: { id: string; name: string } }) => (
+    <Pressable
+      style={styles.optionItem}
+      onPress={() => selectArea(item)}
+    >
+      <Text style={[styles.optionItemText, { color: colors.text }]}>
+        {item.name}
+      </Text>
+      {area === item.name && <Check size={18} color="#0284c7" />}
     </Pressable>
   );
 
@@ -338,19 +346,43 @@ export default function SimulacreGeneratorScreen() {
               </Pressable>
             </View>
 
+            {/* Área */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: colors.subtitle }]}>
+                Área <Text style={styles.required}>*</Text>
+              </Text>
+              <Pressable
+                style={[styles.selector, { backgroundColor: colors.card, borderColor: colors.subtitle }]}
+                onPress={() => setShowAreaModal(true)}
+              >
+                <Text style={[styles.selectorText, area ? { color: colors.text } : { color: colors.subtitle }]}>
+                  {area || "Selecciona el área"}
+                </Text>
+                <ChevronDown size={20} color={colors.subtitle} />
+              </Pressable>
+            </View>
+
             {/* Especialidades */}
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.subtitle }]}>
                 Especialidades <Text style={styles.required}>*</Text>
               </Text>
               <Pressable
-                style={[styles.selector, { backgroundColor: colors.card, borderColor: colors.subtitle }]}
-                onPress={() => setShowSpecialtyModal(true)}
+                style={[
+                  styles.selector,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: area ? colors.subtitle : "#e2e8f0",
+                    opacity: area ? 1 : 0.7,
+                  }
+                ]}
+                onPress={() => area && setShowSpecialtyModal(true)}
+                disabled={!area}
               >
-                <Text style={[styles.selectorText, specialty ? { color: colors.text } : { color: colors.subtitle }]}>
+                <Text style={[styles.selectorText, specialty ? { color: colors.text } : { color: "#94a3b8" }]}>
                   {specialty || "Selecciona la especialidad"}
                 </Text>
-                <ChevronDown size={20} color={colors.subtitle} />
+                <ChevronDown size={20} color={area ? colors.subtitle : "#94a3b8"} />
               </Pressable>
             </View>
 
@@ -452,6 +484,45 @@ export default function SimulacreGeneratorScreen() {
                 <FlatList
                   data={filteredExamTypes}
                   renderItem={renderExamTypeItem}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={{ paddingHorizontal: 15 }}
+                />
+              </View>
+            </View>
+          </Modal>
+
+          {/* Area Modal */}
+          <Modal
+            visible={showAreaModal}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setShowAreaModal(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>
+                    Área
+                  </Text>
+                  <Pressable onPress={() => setShowAreaModal(false)}>
+                    <X size={24} color={colors.text} />
+                  </Pressable>
+                </View>
+
+                <View style={[styles.searchContainer, { borderBottomColor: colors.subtitle, marginHorizontal: 15 }]}>
+                  <Search size={18} color={colors.subtitle} />
+                  <TextInput
+                    style={[styles.searchInput, { color: colors.text }]}
+                    placeholder="Buscar..."
+                    placeholderTextColor={colors.subtitle}
+                    value={areaSearch}
+                    onChangeText={setAreaSearch}
+                  />
+                </View>
+
+                <FlatList
+                  data={filteredAreas}
+                  renderItem={renderAreaItem}
                   keyExtractor={(item) => item.id}
                   contentContainerStyle={{ paddingHorizontal: 15 }}
                 />
@@ -676,13 +747,14 @@ export default function SimulacreGeneratorScreen() {
           <Pressable
             style={[
               styles.createButton,
-              { backgroundColor: examType && specialty && theme && examMode ? "#0284c7" : "#94a3b8" }
+              { backgroundColor: examType && area && specialty && theme && examMode ? "#0284c7" : "#94a3b8" }
             ]}
             onPress={() => {
               router.push({
                 pathname: "/questions",
                 params: {
                   examType,
+                  area,
                   specialty: `${specialty} - ${theme}`,
                   examMode,
                   questionCount: questionCount.toString(),
@@ -690,7 +762,7 @@ export default function SimulacreGeneratorScreen() {
                 },
               });
             }}
-            disabled={!examType || !specialty || !theme || !examMode}
+            disabled={!examType || !area || !specialty || !theme || !examMode}
           >
             <Text style={styles.createButtonText}>
               Crear Simulacro

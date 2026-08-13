@@ -1,9 +1,10 @@
 export const enum TagTypes {
-  User = 'User',
-  Products = 'Products',
-  Orders = 'Orders',
-  Transactions = 'Transactions',
-  Accounts = 'Accounts',
   Profile = 'Profile',
+  Area = 'Area',
+  ExamType = 'ExamType',
+  Specialty = 'Specialty',
+  Theme = 'Theme',
+  Year = 'Year',
+  Question = 'Question',
   // Agregar más tags según necesites
 }

@@ -1,19 +1,14 @@
-import { useTheme } from "@/common/ThemeContext";
 import { Image } from "expo-image";
 import { Moon, Sun } from "lucide-react-native";
 import { memo, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useProfileQuery } from "../services/profile/profile.rtkq";
+import { useTheme } from "./ThemeContext";
 
 interface DashboardHeaderProps {
   title?: string;
   subtitle?: string;
 }
-
-// Memoized user data to prevent recreation on each render
-const USER_DATA = {
-  name: "Juan Carlos",
-  avatar: "https://i.pravatar.cc/150?img=3"
-} as const;
 
 // Memoized to prevent unnecessary re-renders
 const DashboardHeaderComponent = memo(function DashboardHeader({ 
@@ -21,6 +16,13 @@ const DashboardHeaderComponent = memo(function DashboardHeader({
   subtitle 
 }: DashboardHeaderProps) {
   const { colors, darkMode, toggleDarkMode } = useTheme();
+  const { data: profileData, isLoading } = useProfileQuery();
+
+  // Use API data or fallback to defaults
+  const userName = isLoading ? "Cargando..." : (profileData?.name && profileData?.last_name) 
+    ? `${profileData.name} ${profileData.last_name}` 
+    : "Usuario";
+  const userAvatar = "https://i.pravatar.cc/150?img=3"; // Default avatar since API doesn't provide one
 
   // Memoize styles to avoid recreation on each render
   const headerStyle = useMemo(() => [styles.header], []);
@@ -36,7 +38,7 @@ const DashboardHeaderComponent = memo(function DashboardHeader({
     <View style={headerStyle}>
       <View style={headerLeftStyle}>
         <Image 
-          source={{ uri: USER_DATA.avatar }} 
+          source={{ uri: userAvatar }} 
           style={avatarStyle}
           // Optimize image loading
           contentFit="cover"
@@ -52,7 +54,7 @@ const DashboardHeaderComponent = memo(function DashboardHeader({
               </Text>
 
               <Text style={usernameStyle}>
-                {USER_DATA.name}
+                {userName}
               </Text>
             </>
           )}

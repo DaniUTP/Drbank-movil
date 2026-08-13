@@ -4,7 +4,12 @@ import { envs } from '../../config/envs';
 
 const getBaseQueryRN = fetchBaseQuery({
   baseUrl: envs.API_BASE_URL,
-  prepareHeaders: async headers => {
+  prepareHeaders: async (headers) => {
+    // Ensure headers is not undefined
+    if (!headers) {
+      headers = new Headers();
+    }
+
     // Check token expiration
     const expiration = await AsyncStorage.getItem('token_expiration');
     if (expiration) {

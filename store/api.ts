@@ -8,5 +8,11 @@ export const api = createApi({
   reducerPath: 'api',
   tagTypes: [
     TagTypes.Profile,
+    TagTypes.Area,
+    TagTypes.ExamType,
+    TagTypes.Year,
+    TagTypes.Specialty,
+    TagTypes.Theme,
+    TagTypes.Question
   ],
 });
