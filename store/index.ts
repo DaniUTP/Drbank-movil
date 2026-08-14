@@ -5,6 +5,8 @@ import '../services/auth/recovery.rtkq'; // Import to register endpoints
 import '../services/profile/profile.rtkq'; // Import to register endpoints
 import '../services/question/area.rtkq'; // Import to register endpoints
 import '../services/question/exam-type.rtkq'; // Import to register endpoints
+import '../services/question/exam.rtkq'; // Import to register endpoints
+import '../services/question/history.rtkq'; // Import to register endpoints
 import '../services/question/question.rtkq'; // Import to register endpoints
 import '../services/question/specialty.rtkq'; // Import to register endpoints
 import '../services/question/theme.rtkq'; // Import to register endpoints

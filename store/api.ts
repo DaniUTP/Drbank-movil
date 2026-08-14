@@ -13,6 +13,11 @@ export const api = createApi({
     TagTypes.Year,
     TagTypes.Specialty,
     TagTypes.Theme,
-    TagTypes.Question
+    TagTypes.Question,
+    TagTypes.QuestionByYear,
+    TagTypes.QuestionByTheme,
+    TagTypes.Ranking,
+    TagTypes.ChangePassword,
+    TagTypes.Support
   ],
 });

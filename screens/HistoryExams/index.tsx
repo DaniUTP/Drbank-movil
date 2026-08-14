@@ -1,19 +1,22 @@
 import { useRouter } from "expo-router";
 import {
-    ArrowLeft,
-    Brain,
-    Calendar,
-    CheckCircle,
-    Clock,
-    FileText,
-    TrendingUp
+  ArrowLeft,
+  Brain,
+  Calendar,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  FileText,
+  TrendingUp
 } from "lucide-react-native";
 import React, { memo, useMemo, useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    Text,
-    View
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import EmptyState from "../../common/EmptyState";
@@ -23,31 +26,36 @@ import StatCard from "../../common/StatCard";
 import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
 
+import { useGetExamQuery } from "@/services/question/exam.rtkq";
+import { ExamHistoryItemDTO, ExamSummaryItem } from "@/types/question/exam.dto";
+
 // ============================================
 // TYPES
 // ============================================
-interface Examen {
+export interface FormattedExam {
   id: string;
-  date: Date;
   dateString: string;
-  type: "simulacro" | "año" | "extraordinario";
+  type: string;
   category: string;
   score: number;
   questions: number;
   correctAnswers: number;
-  timeMinutes: number;
+  timeSpentSeconds: number;
+  status?: string;
+  startedAt?: string;
+  examSummary?: ExamSummaryItem[];
 }
 
 interface ExamGroup {
   title: string;
-  data: Examen[];
+  data: FormattedExam[];
 }
 
 // ============================================
 // MEMOIZED EXAM CARD COMPONENT
 // ============================================
 interface ExamCardProps {
-  exam: Examen;
+  exam: FormattedExam;
   colors: ReturnType<typeof useTheme>["colors"];
 }
 
@@ -66,34 +74,38 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors }) {
   };
 
   const getTypeIcon = () => {
-    switch (exam.type) {
-      case "simulacro":
-        return <Brain size={24} color="#8b5cf6" />;
-      case "año":
-        return <Calendar size={24} color="#06b6d4" />;
-      case "extraordinario":
-        return <FileText size={24} color="#f43f5e" />;
+    const t = (exam.category || exam.type || "").toLowerCase();
+    if (t.includes("año") || t.includes("year")) {
+      return <Calendar size={24} color="#06b6d4" />;
     }
+    if (t.includes("tema") || t.includes("theme") || t.includes("extra")) {
+      return <FileText size={24} color="#f43f5e" />;
+    }
+    return <Brain size={24} color="#8b5cf6" />;
   };
 
   const getTypeBgColor = () => {
-    switch (exam.type) {
-      case "simulacro":
-        return "#8b5cf620";
-      case "año":
-        return "#06b6d420";
-      case "extraordinario":
-        return "#f43f5e20";
+    const t = (exam.category || exam.type || "").toLowerCase();
+    if (t.includes("año") || t.includes("year")) {
+      return "#06b6d420";
     }
+    if (t.includes("tema") || t.includes("theme") || t.includes("extra")) {
+      return "#f43f5e20";
+    }
+    return "#8b5cf620";
   };
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
+  const formatTime = (seconds: number) => {
+    const totalMinutes = Math.floor(seconds / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
     if (hours > 0) {
       return `${hours}h ${mins}m`;
     }
-    return `${mins} min`;
+    if (mins > 0) {
+      return `${mins} min`;
+    }
+    return `${seconds} seg`;
   };
 
   const scoreColor = getScoreColor(exam.score);
@@ -111,7 +123,7 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors }) {
           percentage: exam.score.toString(),
           examType: exam.type,
           specialty: exam.category,
-          timeSpent: (exam.timeMinutes * 60).toString()
+          timeSpent: exam.timeSpentSeconds.toString()
         }
       })}
     >
@@ -124,14 +136,14 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors }) {
         {getTypeIcon()}
       </View>
       <View style={styles.examInfo}>
-        <Text style={[styles.examType, { color: colors.text }]}>
+        <Text style={[styles.examType, { color: colors.text }]} numberOfLines={1}>
           {exam.category}
         </Text>
         <View style={styles.examMeta}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
             <Clock size={12} color={colors.subtitle} />
             <Text style={{ color: colors.subtitle, fontSize: 12 }}>
-              {formatTime(exam.timeMinutes)}
+              {formatTime(exam.timeSpentSeconds)}
             </Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
@@ -165,155 +177,151 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors }) {
   );
 });
 
-// Prevent hydration mismatch
 ExamCard.displayName = "ExamCard";
 
 // ============================================
 // MAIN SCREEN COMPONENT
 // ============================================
-type FilterType = "all" | "simulacro" | "año" | "extraordinario";
+type FilterType = "all" | "simulation" | "by_year" | "by_topic";
+
+const PAGE_LIMIT = 10;
 
 export default function HistoryExamsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const [page, setPage] = useState(1);
 
-  // Sample data - In production, this would come from AsyncStorage or API
-  const examHistory = useMemo<Examen[]>(() => [
-    {
-      id: "1",
-      date: new Date(),
-      dateString: "Hoy",
-      type: "simulacro",
-      category: "Simulacro - Cardiología",
-      score: 82,
-      questions: 50,
-      correctAnswers: 41,
-      timeMinutes: 145,
-    },
-    {
-      id: "2",
-      date: new Date(Date.now() - 86400000),
-      dateString: "Ayer",
-      type: "año",
-      category: "Examen por año 2023",
-      score: 75,
-      questions: 100,
-      correctAnswers: 75,
-      timeMinutes: 180,
-    },
-    {
-      id: "3",
-      date: new Date(Date.now() - 86400000 * 3),
-      dateString: "18 Mar",
-      type: "simulacro",
-      category: "Simulacro - Pediatría",
-      score: 68,
-      questions: 50,
-      correctAnswers: 34,
-      timeMinutes: 132,
-    },
-    {
-      id: "4",
-      date: new Date(Date.now() - 86400000 * 5),
-      dateString: "15 Mar",
-      type: "extraordinario",
-      category: "Examen Extraordinario",
-      score: 91,
-      questions: 80,
-      correctAnswers: 73,
-      timeMinutes: 165,
-    },
-    {
-      id: "5",
-      date: new Date(Date.now() - 86400000 * 7),
-      dateString: "12 Mar",
-      type: "simulacro",
-      category: "Simulacro - Farmacología",
-      score: 78,
-      questions: 45,
-      correctAnswers: 35,
-      timeMinutes: 98,
-    },
-    {
-      id: "6",
-      date: new Date(Date.now() - 86400000 * 10),
-      dateString: "9 Mar",
-      type: "año",
-      category: "Examen por año 2022",
-      score: 72,
-      questions: 100,
-      correctAnswers: 72,
-      timeMinutes: 175,
-    },
-    {
-      id: "7",
-      date: new Date(Date.now() - 86400000 * 12),
-      dateString: "7 Mar",
-      type: "simulacro",
-      category: "Simulacro - Neurología",
-      score: 65,
-      questions: 50,
-      correctAnswers: 33,
-      timeMinutes: 140,
-    },
-    {
-      id: "8",
-      date: new Date(Date.now() - 86400000 * 15),
-      dateString: "4 Mar",
-      type: "simulacro",
-      category: "Simulacro - Anatomía",
-      score: 88,
-      questions: 60,
-      correctAnswers: 53,
-      timeMinutes: 120,
-    },
-    {
-      id: "9",
-      date: new Date(Date.now() - 86400000 * 18),
-      dateString: "1 Mar",
-      type: "año",
-      category: "Examen por año 2021",
-      score: 79,
-      questions: 100,
-      correctAnswers: 79,
-      timeMinutes: 190,
-    },
-    {
-      id: "10",
-      date: new Date(Date.now() - 86400000 * 20),
-      dateString: "26 Feb",
-      type: "extraordinario",
-      category: "Simulacro General",
-      score: 85,
-      questions: 100,
-      correctAnswers: 85,
-      timeMinutes: 200,
-    },
-  ], []);
-
-  // Filter and search exams
-  const filteredExams = useMemo(() => {
-    let filtered = examHistory;
-
-    // Apply type filter
+  // Prepare query payload
+  const queryParams = useMemo(() => {
+    const params: { limit: number; page: number; exam_type?: string } = {
+      limit: PAGE_LIMIT,
+      page,
+    };
     if (activeFilter !== "all") {
-      filtered = filtered.filter((exam) => exam.type === activeFilter);
+      params.exam_type = activeFilter;
+    }
+    return params;
+  }, [page, activeFilter]);
+
+  // Consume API GET /quiz/exam with params
+  const {
+    data: examDataRaw,
+    isLoading,
+    isFetching
+  } = useGetExamQuery(queryParams);
+
+  // Extract raw exam list
+  const rawList: ExamHistoryItemDTO[] = useMemo(() => {
+    if (!examDataRaw) return [];
+    if (Array.isArray(examDataRaw.data)) return examDataRaw.data;
+    if (Array.isArray(examDataRaw)) return examDataRaw;
+    if (Array.isArray((examDataRaw as any).exams)) return (examDataRaw as any).exams;
+    return [];
+  }, [examDataRaw]);
+
+  // Last page from pagination
+  const lastPage = useMemo(() => {
+    if (examDataRaw && typeof examDataRaw.total_pages === 'number' && examDataRaw.total_pages > 0) {
+      return examDataRaw.total_pages;
+    }
+    if (examDataRaw && typeof (examDataRaw as any).last_page === 'number' && (examDataRaw as any).last_page > 0) {
+      return (examDataRaw as any).last_page;
+    }
+    return rawList.length === PAGE_LIMIT ? page + 1 : page;
+  }, [examDataRaw, rawList.length, page]);
+
+  const hasNextPage = page < lastPage;
+  const hasPrevPage = page > 1;
+
+  // Custom date parser for DD/MM/YYYY HH:mm:ss and standard ISO formats
+  const parseCustomDate = (dateStr?: string): Date | null => {
+    if (!dateStr) return null;
+    const cleanStr = dateStr.trim();
+
+    if (cleanStr.includes("/")) {
+      const [datePart, timePart] = cleanStr.split(" ");
+      const dParts = datePart.split("/");
+      if (dParts.length === 3) {
+        const day = parseInt(dParts[0], 10);
+        const month = parseInt(dParts[1], 10) - 1;
+        const year = parseInt(dParts[2], 10);
+
+        let hours = 0;
+        let minutes = 0;
+        let seconds = 0;
+        if (timePart) {
+          const tParts = timePart.split(":");
+          hours = parseInt(tParts[0], 10) || 0;
+          minutes = parseInt(tParts[1], 10) || 0;
+          seconds = parseInt(tParts[2], 10) || 0;
+        }
+        const d = new Date(year, month, day, hours, minutes, seconds);
+        if (!isNaN(d.getTime())) return d;
+      }
     }
 
-    // Apply search
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((exam) =>
-        exam.category.toLowerCase().includes(query)
-      );
-    }
+    const standard = new Date(cleanStr);
+    return isNaN(standard.getTime()) ? null : standard;
+  };
 
-    return filtered;
-  }, [examHistory, activeFilter, searchQuery]);
+  const formatDateGroup = (dateString?: string): string => {
+    if (!dateString) return "Historial de Evaluaciones";
+    const date = parseCustomDate(dateString);
+    if (!date) return "Historial de Evaluaciones";
 
-  // Helper to format large numbers
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    if (isToday) return "Hoy";
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) return "Ayer";
+
+    return date.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "short",
+      year: "numeric"
+    });
+  };
+  console.log("data:",rawList);
+  // Convert raw items into formatted items
+  const formattedExams: FormattedExam[] = useMemo(() => {
+    return rawList.map((item, index) => {
+      const questions = Number(item.total_questions) || (Array.isArray(item.exam_summary) ? item.exam_summary.length : 0);
+      const score = Math.round(Number(item.score_percentage) || 0);
+      const correctAnswers = Array.isArray(item.exam_summary) && item.exam_summary.length > 0
+        ? item.exam_summary.filter(s => (s.correct_answer || '').toLowerCase() === (s.response || '').toLowerCase()).length
+        : Math.round((score / 100) * questions);
+      const timeSpentSeconds = Number(item.time_spent) || 0;
+
+      return {
+        id: (item.uuid || (item as any).id || (index + 1)).toString(),
+        dateString: formatDateGroup(item.started_at || item.completed_at),
+        type: item.title?.toLowerCase().includes("año") ? "año" : item.title?.toLowerCase().includes("tema") ? "theme" : "simulacro",
+        category: item.title || "Simulacro Médico",
+        score,
+        questions,
+        correctAnswers,
+        timeSpentSeconds,
+        status: item.status,
+        startedAt: item.started_at,
+        examSummary: item.exam_summary
+      };
+    });
+  }, [rawList]);
+
+  // Filter by search query
+  const filteredExams = useMemo(() => {
+    if (!searchQuery.trim()) return formattedExams;
+    const query = searchQuery.toLowerCase();
+    return formattedExams.filter((exam) =>
+      exam.category.toLowerCase().includes(query)
+    );
+  }, [formattedExams, searchQuery]);
+
+  // Format large numbers
   const formatNumber = (num: number): string => {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
@@ -326,26 +334,18 @@ export default function HistoryExamsScreen() {
 
   // Calculate stats
   const stats = useMemo(() => {
-    const totalExams = examHistory.length;
-    const avgScore = Math.round(
-      examHistory.reduce((acc, exam) => acc + exam.score, 0) / totalExams
-    );
-    const totalQuestions = examHistory.reduce(
-      (acc, exam) => acc + exam.questions,
-      0
-    );
-    const totalTime = examHistory.reduce(
-      (acc, exam) => acc + exam.timeMinutes,
-      0
-    );
-    const days = Math.floor(totalTime / 1440); // 1440 minutes in a day
-    const hours = Math.floor((totalTime % 1440) / 60);
-    const minutes = totalTime % 60;
-    
+    const totalExams = (typeof examDataRaw?.total === 'number') ? examDataRaw.total : formattedExams.length;
+    const avgScore = formattedExams.length > 0
+      ? Math.round(formattedExams.reduce((acc, exam) => acc + exam.score, 0) / formattedExams.length)
+      : 0;
+
+    const totalSeconds = formattedExams.reduce((acc, exam) => acc + exam.timeSpentSeconds, 0);
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
     let formattedTime: string;
-    if (days > 0) {
-      formattedTime = `${days}d ${hours}h`;
-    } else if (hours > 0) {
+    if (hours > 0) {
       formattedTime = `${hours}h ${minutes}min`;
     } else {
       formattedTime = `${minutes}min`;
@@ -354,14 +354,13 @@ export default function HistoryExamsScreen() {
     return {
       totalExams: formatNumber(totalExams),
       avgScore,
-      totalQuestions: formatNumber(totalQuestions),
       totalTime: formattedTime,
     };
-  }, [examHistory]);
+  }, [examDataRaw, formattedExams]);
 
   // Group exams by date category
   const groupedExams = useMemo<ExamGroup[]>(() => {
-    const groups: { [key: string]: Examen[] } = {};
+    const groups: { [key: string]: FormattedExam[] } = {};
 
     filteredExams.forEach((exam) => {
       const key = exam.dateString;
@@ -377,10 +376,6 @@ export default function HistoryExamsScreen() {
     }));
   }, [filteredExams]);
 
-  const renderExamItem = ({ item }: { item: Examen }) => (
-    <ExamCard exam={item} colors={colors} />
-  );
-
   const renderSectionHeader = (title: string) => (
     <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
   );
@@ -388,10 +383,15 @@ export default function HistoryExamsScreen() {
   // Filter tabs configuration
   const filterTabs: { key: FilterType; label: string }[] = [
     { key: "all", label: "Todos" },
-    { key: "simulacro", label: "Simulacros" },
-    { key: "año", label: "Por Año" },
-    { key: "extraordinario", label: "Por tema" },
+    { key: "simulation", label: "Simulacros" },
+    { key: "by_year", label: "Por Año" },
+    { key: "by_topic", label: "Por Tema" },
   ];
+
+  const handleFilterChange = (key: string) => {
+    setActiveFilter(key as FilterType);
+    setPage(1);
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -449,24 +449,64 @@ export default function HistoryExamsScreen() {
         <FilterTabs
           tabs={filterTabs}
           activeTab={activeFilter}
-          onTabChange={(key) => setActiveFilter(key as FilterType)}
+          onTabChange={handleFilterChange}
         />
 
-        {/* Exam List */}
-        {filteredExams.length > 0 ? (
-          groupedExams.map((group) => (
-            <View key={group.title}>
-              {renderSectionHeader(group.title)}
-              {group.data.map((exam) => (
-                <ExamCard key={exam.id} exam={exam} colors={colors} />
-              ))}
+        {/* Exam List or Loading/Empty */}
+        {isLoading || isFetching ? (
+          <View style={{ paddingVertical: 40, alignItems: "center" }}>
+            <ActivityIndicator size="large" color="#0284c7" />
+            <Text style={{ marginTop: 10, color: colors.subtitle || "#64748b", fontSize: 13 }}>
+              Cargando historial de exámenes...
+            </Text>
+          </View>
+        ) : filteredExams.length > 0 ? (
+          <>
+            {groupedExams.map((group) => (
+              <View key={group.title}>
+                {renderSectionHeader(group.title)}
+                {group.data.map((exam) => (
+                  <ExamCard key={exam.id} exam={exam} colors={colors} />
+                ))}
+              </View>
+            ))}
+
+            {/* Pagination Controls */}
+            <View style={styles.paginationContainer}>
+              <Pressable
+                style={[
+                  styles.paginationButton,
+                  !hasPrevPage && styles.paginationButtonDisabled
+                ]}
+                disabled={!hasPrevPage || isFetching}
+                onPress={() => setPage(p => Math.max(1, p - 1))}
+              >
+                <ChevronLeft size={16} color="#0284c7" />
+                <Text style={styles.paginationButtonText}>Anterior</Text>
+              </Pressable>
+
+              <Text style={[styles.paginationIndicator, { color: colors.text }]}>
+                Página {page} de {lastPage}
+              </Text>
+
+              <Pressable
+                style={[
+                  styles.paginationButton,
+                  !hasNextPage && styles.paginationButtonDisabled
+                ]}
+                disabled={!hasNextPage || isFetching}
+                onPress={() => setPage(p => p + 1)}
+              >
+                <Text style={styles.paginationButtonText}>Siguiente</Text>
+                <ChevronRight size={16} color="#0284c7" />
+              </Pressable>
             </View>
-          ))
+          </>
         ) : (
           <EmptyState
             icon={FileText}
             title="No se encontraron exámenes"
-            subtitle="Intenta con otros filtros de búsqueda"
+            subtitle="No hay exámenes registrados para este filtro de búsqueda"
           />
         )}
       </ScrollView>

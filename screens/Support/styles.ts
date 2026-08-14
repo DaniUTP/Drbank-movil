@@ -8,173 +8,214 @@ export const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingHorizontal: 16,
-        paddingTop: 50,
-        paddingBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#e2e8f0",
+        paddingHorizontal: 20,
+        paddingTop: 45,
+        paddingBottom: 15,
     },
     backButton: {
         padding: 8,
+        borderRadius: 10,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: "700",
+        letterSpacing: -0.3,
     },
     headerPlaceholder: {
-        width: 40,
+        width: 36,
     },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
-        padding: 16,
-        paddingBottom: 32,
+        paddingHorizontal: 18,
+        paddingBottom: 40,
     },
-    titleSection: {
+
+    // Hero Banner
+    heroBanner: {
+        borderRadius: 18,
+        padding: 20,
         marginBottom: 20,
-    },
-    titleRow: {
+        borderWidth: 1,
+        borderColor: "rgba(2, 132, 199, 0.12)",
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "flex-start",
-        marginBottom: 8,
-        gap: 12,
+        gap: 16,
     },
-    mainTitle: {
-        fontSize: 20,
-        fontWeight: "700",
-        flexWrap: "wrap",
-        flex: 1,
-    },
-    supportIconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
+    heroIconBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 14,
+        backgroundColor: "rgba(2, 132, 199, 0.12)",
         justifyContent: "center",
         alignItems: "center",
     },
-    subtitle: {
-        fontSize: 14,
-        lineHeight: 20,
+    heroContent: {
+        flex: 1,
     },
-    section: {
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 24,
-    },
-    sectionTitle: {
+    heroTitle: {
         fontSize: 16,
-        fontWeight: "600",
-        marginBottom: 16,
+        fontWeight: "700",
+        marginBottom: 3,
+        letterSpacing: -0.2,
     },
+    heroSubtitle: {
+        fontSize: 13,
+        lineHeight: 18,
+    },
+
+    // Form Section Card
+    cardSection: {
+        borderRadius: 18,
+        padding: 20,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: "rgba(0, 0, 0, 0.06)",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    sectionHeading: {
+        fontSize: 15,
+        fontWeight: "700",
+        marginBottom: 16,
+        letterSpacing: -0.2,
+    },
+
+    // Input Fields
     inputGroup: {
         marginBottom: 16,
     },
-    label: {
-        fontSize: 14,
-        fontWeight: "500",
-        marginBottom: 8,
+    labelRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 7,
     },
-    inputContainer: {
+    label: {
+        fontSize: 13,
+        fontWeight: "600",
+    },
+    optionalBadge: {
+        fontSize: 11,
+    },
+    inputBox: {
         flexDirection: "row",
         alignItems: "center",
         borderWidth: 1,
         borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 11,
     },
-    input: {
+    inputField: {
         flex: 1,
-        fontSize: 15,
+        fontSize: 14,
         marginLeft: 10,
         paddingVertical: 0,
     },
-    selectContainer: {
+
+    // Select box
+    selectBox: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
         borderWidth: 1,
         borderRadius: 12,
-        paddingHorizontal: 12,
+        paddingHorizontal: 14,
         paddingVertical: 12,
     },
-    selectText: {
-        fontSize: 15,
+    selectValueText: {
+        fontSize: 14,
     },
-    priorityContainer: {
+
+    // Priority segmented pills
+    priorityRow: {
         flexDirection: "row",
-        gap: 10,
+        gap: 8,
     },
-    priorityButton: {
+    priorityPill: {
         flex: 1,
         paddingVertical: 10,
         borderRadius: 10,
         borderWidth: 1,
         alignItems: "center",
+        justifyContent: "center",
     },
-    priorityButtonText: {
-        fontSize: 13,
+    priorityPillText: {
+        fontSize: 12,
         fontWeight: "600",
     },
-    textAreaContainer: {
+
+    // Text Area
+    textAreaBox: {
         borderWidth: 1,
         borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
     },
-    textArea: {
-        fontSize: 15,
-        minHeight: 120,
+    textAreaField: {
+        fontSize: 14,
+        minHeight: 110,
+    },
+    charCounter: {
+        fontSize: 11,
+        textAlign: "right",
+        marginTop: 4,
     },
     errorText: {
         color: "#ef4444",
         fontSize: 12,
-        marginTop: 4,
+        marginTop: 5,
+        fontWeight: "500",
     },
-    submitButton: {
+
+    // Submit Button
+    submitBtn: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        paddingVertical: 16,
-        borderRadius: 12,
-        gap: 8,
+        paddingVertical: 15,
+        borderRadius: 14,
+        gap: 10,
+        shadowColor: "#0284c7",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+        elevation: 3,
     },
-    submitButtonText: {
-        color: "white",
-        fontSize: 16,
-        fontWeight: "600",
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    modalContent: {
-        width: "85%",
-        maxWidth: 350,
-        borderRadius: 16,
-        padding: 20,
-        maxHeight: 400,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: "600",
-        marginBottom: 16,
-        textAlign: "center",
-    },
-    modalScrollView: {
-        maxHeight: 300,
-    },
-    modalOption: {
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: 10,
-        marginBottom: 8,
-    },
-    modalOptionText: {
+    submitBtnText: {
+        color: "#ffffff",
         fontSize: 15,
-        fontWeight: "500",
+        fontWeight: "700",
+    },
+
+    // Reason Modal Options
+    reasonOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 13,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        marginBottom: 8,
+        borderWidth: 1,
+    },
+    reasonOptionText: {
+        fontSize: 14,
+        fontWeight: "600",
+    },
+
+    // Modal Content styles
+    modalMessageContainer: {
+        alignItems: "center",
+        paddingVertical: 10,
+    },
+    modalMessageText: {
+        fontSize: 15,
+        textAlign: "center",
+        lineHeight: 22,
     },
 });

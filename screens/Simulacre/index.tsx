@@ -2,6 +2,7 @@ import DashboardHeader from "@/common/DashboardHeader";
 import { useTheme } from "@/common/ThemeContext";
 import { useRouter } from "expo-router";
 import { Calendar, LayoutGrid, Settings } from "lucide-react-native";
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { styles } from "./styles";
@@ -9,6 +10,7 @@ import { styles } from "./styles";
 export default function SimulacreScreen() {
  const { colors } = useTheme();
  const router = useRouter();
+ const [pressedCard, setPressedCard] = useState<string | null>(null);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -21,8 +23,14 @@ export default function SimulacreScreen() {
 
       <View style={styles.optionsContainer}>
         <Pressable 
-          style={[styles.optionCard, { backgroundColor: colors.card }]}
+          style={[
+            styles.optionCard, 
+            { backgroundColor: colors.card },
+            pressedCard === 'generator' && styles.optionCardPressed
+          ]}
           onPress={() => router.push("/simulacre-generator")}
+          onPressIn={() => setPressedCard('generator')}
+          onPressOut={() => setPressedCard(null)}
         >
           <View style={[styles.iconContainer, { backgroundColor: "#e0f2fe" }]}>
             <Settings size={28} color="#0284c7" />
@@ -35,8 +43,16 @@ export default function SimulacreScreen() {
           </View>
         </Pressable>
 
-        <Pressable style={[styles.optionCard, { backgroundColor: colors.card }]}
-         onPress={()=>router.push("/simulacre-by-year")}>
+        <Pressable 
+          style={[
+            styles.optionCard, 
+            { backgroundColor: colors.card },
+            pressedCard === 'year' && styles.optionCardPressed
+          ]}
+          onPress={()=>router.push("/simulacre-by-year")}
+          onPressIn={() => setPressedCard('year')}
+          onPressOut={() => setPressedCard(null)}
+        >
           <View style={[styles.iconContainer, { backgroundColor: "#f0fdf4" }]}>
             <Calendar size={28} color="#22c55e" />
           </View>
@@ -48,8 +64,16 @@ export default function SimulacreScreen() {
           </View>
         </Pressable>
 
-        <Pressable style={[styles.optionCard, { backgroundColor: colors.card }]}
-         onPress={()=>router.push("/simulacre-by-theme")}>
+        <Pressable 
+          style={[
+            styles.optionCard, 
+            { backgroundColor: colors.card },
+            pressedCard === 'theme' && styles.optionCardPressed
+          ]}
+          onPress={()=>router.push("/simulacre-by-theme")}
+          onPressIn={() => setPressedCard('theme')}
+          onPressOut={() => setPressedCard(null)}
+        >
           <View style={[styles.iconContainer, { backgroundColor: "#fef3c7" }]}>
             <LayoutGrid size={28} color="#d97706" />
           </View>

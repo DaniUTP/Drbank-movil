@@ -1,8 +1,7 @@
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    Modal,
+    ActivityIndicator,
     Pressable,
     ScrollView,
     Text,
@@ -11,12 +10,21 @@ import {
     View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Modal from "../../common/Modal";
 import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
 
+import { useLazySupportQuery } from "@/services/external/support.rtkq";
+import { useProfileQuery } from "@/services/profile/profile.rtkq";
+
 import {
+    AlertCircle,
     ArrowLeft,
+    Check,
+    CheckCircle2,
     ChevronDown,
+    Headphones,
+    HelpCircle,
     Mail,
     Send,
     User
@@ -24,71 +32,115 @@ import {
 
 type Priority = "normal" | "alta" | "urgente";
 
-const PRIORITIES: { value: Priority; label: string; color: string }[] = [
-    { value: "normal", label: "Normal", color: "#22c55e" },
-    { value: "alta", label: "Alta", color: "#f59e0b" },
-    { value: "urgente", label: "Urgente", color: "#ef4444" },
+const PRIORITIES: { value: Priority; label: string; color: string; bg: string }[] = [
+    { value: "normal", label: "Normal", color: "#16a34a", bg: "rgba(22, 163, 74, 0.1)" },
+    { value: "alta", label: "Media / Alta", color: "#d97706", bg: "rgba(217, 119, 6, 0.1)" },
+    { value: "urgente", label: "Urgente", color: "#dc2626", bg: "rgba(220, 38, 38, 0.1)" },
 ];
 
 const MOTIVOS = [
-    "Problema técnico",
-    "Error en la aplicación",
+    "Problema técnico en la aplicación",
+    "Reporte de pregunta o contenido",
     "Sugerencia de mejora",
-    "Pregunta general",
-    "Problema de cuenta",
-    "Otros"
+    "Consulta sobre suscripción o cuenta",
+    "Pregunta académica general",
+    "Otros motivos"
 ];
 
-// Datos del usuario (simulados - en producción vendrían de AsyncStorage o API)
-const USER_DATA = {
-    nombreCompleto: "Juan Pérez García",
-    email: "juan.perez@email.com"
-};
-
 export default function SupportScreen() {
-    const { colors } = useTheme();
+    const { colors, darkMode } = useTheme();
     const router = useRouter();
 
+    // Profile query to get current user data
+    const { data: profileData } = useProfileQuery();
+
+    // Support query trigger
+    const [triggerSupport, { isLoading: isSubmitting }] = useLazySupportQuery();
+
     const [formData, setFormData] = useState({
-        nombreCompleto: USER_DATA.nombreCompleto,
-        email: USER_DATA.email,
+        nombreCompleto: "",
+        lastName: "",
+        email: "",
         motivo: "",
         prioridad: "normal" as Priority,
         descripcion: ""
     });
 
+    // Response Modal State (replaces Alert)
+    const [responseModal, setResponseModal] = useState<{
+        visible: boolean;
+        isSuccess: boolean;
+        message: string;
+    }>({
+        visible: false,
+        isSuccess: true,
+        message: "",
+    });
+
     const [showMotivoModal, setShowMotivoModal] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        if (profileData) {
+            const fullName = `${profileData.name || ""} ${profileData.last_name || ""}`.trim();
+            setFormData(prev => ({
+                ...prev,
+                nombreCompleto: fullName || "Usuario DrBank",
+                lastName: profileData.last_name || "",
+                email: profileData.email || "",
+            }));
+        }
+    }, [profileData]);
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
 
         if (!formData.motivo) {
-            newErrors.motivo = "Selecciona un motivo de contacto";
+            newErrors.motivo = "Por favor selecciona un motivo de consulta.";
         }
 
         if (!formData.descripcion.trim()) {
-            newErrors.descripcion = "La descripción es requerida";
-        } else if (formData.descripcion.trim().length < 20) {
-            newErrors.descripcion = "La descripción debe tener al menos 20 caracteres";
+            newErrors.descripcion = "La descripción de la consulta es requerida.";
+        } else if (formData.descripcion.trim().length < 10) {
+            newErrors.descripcion = "Describe tu caso con al menos 10 caracteres.";
         }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = () => {
-        if (validateForm()) {
-            Alert.alert(
-                "Solicitud Enviada",
-                "Tu solicitud de soporte ha sido enviada. Te responderemos lo antes posible.",
-                [
-                    {
-                        text: "Aceptar",
-                        onPress: () => router.back()
-                    }
-                ]
-            );
+    const handleSubmit = async () => {
+        if (!validateForm()) return;
+
+        try {
+            const result = await triggerSupport({
+                last_name: formData.lastName || profileData?.last_name || formData.nombreCompleto,
+                email: formData.email || profileData?.email || "",
+                reason: formData.motivo,
+                description: formData.descripcion.trim(),
+                response: formData.prioridad || "normal",
+            }).unwrap();
+
+            setResponseModal({
+                visible: true,
+                isSuccess: true,
+                message: result?.message || "Tu solicitud de soporte ha sido enviada con éxito. Nuestro equipo te responderá a la brevedad a tu correo electrónico.",
+            });
+        } catch (error: any) {
+            const errorMessage = error?.data?.message || error?.message || "No se pudo enviar la solicitud de soporte. Por favor verifica tu conexión e inténtalo nuevamente.";
+            setResponseModal({
+                visible: true,
+                isSuccess: false,
+                message: errorMessage,
+            });
+        }
+    };
+
+    const handleCloseResponseModal = () => {
+        const wasSuccess = responseModal.isSuccess;
+        setResponseModal(prev => ({ ...prev, visible: false }));
+        if (wasSuccess) {
+            router.back();
         }
     };
 
@@ -110,15 +162,15 @@ export default function SupportScreen() {
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: colors.card }]}>
+            <View style={[styles.header, { backgroundColor: colors.background }]}>
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    style={styles.backButton}
+                    style={[styles.backButton, { backgroundColor: colors.card }]}
                 >
-                    <ArrowLeft size={24} color={colors.text} />
+                    <ArrowLeft size={22} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>
-                    Soporte
+                    Centro de Soporte
                 </Text>
                 <View style={styles.headerPlaceholder} />
             </View>
@@ -128,82 +180,85 @@ export default function SupportScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Title Section */}
-                <View style={styles.titleSection}>
-                    <View style={styles.titleRow}>
-                        <View style={[styles.supportIconContainer, { backgroundColor: "#fce7f3" }]}>
-                            <User size={18} color="#db2777" />
-                        </View>
-                        <Text style={[styles.mainTitle, { color: colors.text }]}>
-                            Envia tu consulta detallada
+                {/* Hero Banner */}
+                <View style={[styles.heroBanner, { backgroundColor: darkMode ? "#1e293b" : "#f0f9ff" }]}>
+                    <View style={styles.heroIconBox}>
+                        <Headphones size={24} color="#0284c7" />
+                    </View>
+                    <View style={styles.heroContent}>
+                        <Text style={[styles.heroTitle, { color: colors.text }]}>
+                            ¿En qué podemos ayudarte?
+                        </Text>
+                        <Text style={[styles.heroSubtitle, { color: colors.subtitle || "#64748b" }]}>
+                            Envíanos tus dudas o incidencias técnicas y las atenderemos a la brevedad.
                         </Text>
                     </View>
-                    <Text style={[styles.subtitle, { color: colors.subtitle }]}>
-                        Completa el formulario y te responderemos lo antes posible.
-                    </Text>
                 </View>
 
-                {/* Contact Information Section */}
-                <View style={[styles.section, { backgroundColor: colors.card }]}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                        Información del contacto
+                {/* Form Card */}
+                <View style={[styles.cardSection, { backgroundColor: colors.card }]}>
+                    <Text style={[styles.sectionHeading, { color: colors.text }]}>
+                        Datos de la Consulta
                     </Text>
 
-                    {/* Nombre Completo (Read-only) */}
+                    {/* Nombre Completo */}
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, { color: colors.text }]}>
-                            Nombre completo
+                            Estudiante / Médico
                         </Text>
                         <View style={[
-                            styles.inputContainer,
-                            { backgroundColor: colors.background, borderColor: colors.inputBorder }
+                            styles.inputBox,
+                            { backgroundColor: darkMode ? "#0f172a" : "#f8fafc", borderColor: darkMode ? "#334155" : "#e2e8f0" }
                         ]}>
-                            <User size={20} color={colors.subtitle} />
+                            <User size={18} color={colors.subtitle || "#64748b"} />
                             <TextInput
-                                style={[styles.input, { color: colors.text }]}
+                                style={[styles.inputField, { color: colors.text }]}
                                 value={formData.nombreCompleto}
                                 editable={false}
                             />
                         </View>
                     </View>
 
-                    {/* Email (Read-only) */}
+                    {/* Email */}
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, { color: colors.text }]}>
-                            Email del contacto
+                            Correo de contacto
                         </Text>
                         <View style={[
-                            styles.inputContainer,
-                            { backgroundColor: colors.background, borderColor: colors.inputBorder }
+                            styles.inputBox,
+                            { backgroundColor: darkMode ? "#0f172a" : "#f8fafc", borderColor: darkMode ? "#334155" : "#e2e8f0" }
                         ]}>
-                            <Mail size={20} color={colors.subtitle} />
+                            <Mail size={18} color={colors.subtitle || "#64748b"} />
                             <TextInput
-                                style={[styles.input, { color: colors.text }]}
+                                style={[styles.inputField, { color: colors.text }]}
                                 value={formData.email}
                                 editable={false}
                             />
                         </View>
                     </View>
 
-                    {/* Motivo de contacto (Select) */}
+                    {/* Motivo de contacto */}
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, { color: colors.text }]}>
-                            Motivo de contacto
+                            Motivo de la solicitud *
                         </Text>
                         <TouchableOpacity
                             style={[
-                                styles.selectContainer,
-                                { backgroundColor: colors.background, borderColor: errors.motivo ? "#ef4444" : colors.inputBorder }
+                                styles.selectBox,
+                                {
+                                    backgroundColor: darkMode ? "#0f172a" : "#ffffff",
+                                    borderColor: errors.motivo ? "#ef4444" : (darkMode ? "#334155" : "#e2e8f0")
+                                }
                             ]}
                             onPress={() => setShowMotivoModal(true)}
                         >
                             <Text style={[
-                                styles.selectText,
-                                { color: formData.motivo ? colors.text : colors.subtitle }
+                                styles.selectValueText,
+                                { color: formData.motivo ? colors.text : (colors.subtitle || "#94a3b8") }
                             ]}>
-                                {formData.motivo || "Selecciona un motivo"}
+                                {formData.motivo || "Selecciona un motivo..."}
                             </Text>
-                            <ChevronDown size={20} color={colors.subtitle} />
+                            <ChevronDown size={18} color={colors.subtitle || "#64748b"} />
                         </TouchableOpacity>
                         {errors.motivo && (
                             <Text style={styles.errorText}>{errors.motivo}</Text>
@@ -213,53 +268,58 @@ export default function SupportScreen() {
                     {/* Prioridad */}
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, { color: colors.text }]}>
-                            Prioridad
+                            Nivel de urgencia
                         </Text>
-                        <View style={styles.priorityContainer}>
-                            {PRIORITIES.map((priority) => (
-                                <TouchableOpacity
-                                    key={priority.value}
-                                    style={[
-                                        styles.priorityButton,
-                                        {
-                                            backgroundColor: formData.prioridad === priority.value
-                                                ? priority.color
-                                                : colors.background,
-                                            borderColor: priority.color
-                                        }
-                                    ]}
-                                    onPress={() => updateField("prioridad", priority.value)}
-                                >
-                                    <Text style={[
-                                        styles.priorityButtonText,
-                                        {
-                                            color: formData.prioridad === priority.value
-                                                ? "white"
-                                                : colors.text
-                                        }
-                                    ]}>
-                                        {priority.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
+                        <View style={styles.priorityRow}>
+                            {PRIORITIES.map((priority) => {
+                                const isSelected = formData.prioridad === priority.value;
+                                return (
+                                    <TouchableOpacity
+                                        key={priority.value}
+                                        style={[
+                                            styles.priorityPill,
+                                            {
+                                                backgroundColor: isSelected ? priority.color : (darkMode ? "#0f172a" : "#f8fafc"),
+                                                borderColor: isSelected ? priority.color : (darkMode ? "#334155" : "#e2e8f0")
+                                            }
+                                        ]}
+                                        onPress={() => updateField("prioridad", priority.value)}
+                                    >
+                                        <Text style={[
+                                            styles.priorityPillText,
+                                            { color: isSelected ? "#ffffff" : (colors.subtitle || "#64748b") }
+                                        ]}>
+                                            {priority.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </View>
                     </View>
 
-                    {/* Descripción detallada */}
+                    {/* Descripción */}
                     <View style={styles.inputGroup}>
-                        <Text style={[styles.label, { color: colors.text }]}>
-                            Descripción detallada
-                        </Text>
+                        <View style={styles.labelRow}>
+                            <Text style={[styles.label, { color: colors.text }]}>
+                                Descripción detallada *
+                            </Text>
+                            <Text style={[styles.charCounter, { color: colors.subtitle || "#64748b" }]}>
+                                {formData.descripcion.length}/500
+                            </Text>
+                        </View>
                         <View style={[
-                            styles.textAreaContainer,
-                            { backgroundColor: colors.background, borderColor: errors.descripcion ? "#ef4444" : colors.inputBorder }
+                            styles.textAreaBox,
+                            {
+                                backgroundColor: darkMode ? "#0f172a" : "#ffffff",
+                                borderColor: errors.descripcion ? "#ef4444" : (darkMode ? "#334155" : "#e2e8f0")
+                            }
                         ]}>
                             <TextInput
-                                style={[styles.textArea, { color: colors.text }]}
-                                placeholder="Describe tu problema o consulta con el mayor detalle posible..."
-                                placeholderTextColor={colors.subtitle}
+                                style={[styles.textAreaField, { color: colors.text }]}
+                                placeholder="Describe con claridad lo sucedido o la consulta que deseas realizar..."
+                                placeholderTextColor={colors.subtitle || "#94a3b8"}
                                 value={formData.descripcion}
-                                onChangeText={(value) => updateField("descripcion", value)}
+                                onChangeText={(value) => updateField("descripcion", value.slice(0, 500))}
                                 multiline
                                 numberOfLines={5}
                                 textAlignVertical="top"
@@ -273,61 +333,84 @@ export default function SupportScreen() {
 
                 {/* Submit Button */}
                 <TouchableOpacity
-                    style={[styles.submitButton, { backgroundColor: "#0284c7" }]}
+                    style={[
+                        styles.submitBtn,
+                        { backgroundColor: "#0284c7", opacity: isSubmitting ? 0.7 : 1 }
+                    ]}
                     onPress={handleSubmit}
-                    activeOpacity={0.8}
+                    disabled={isSubmitting}
+                    activeOpacity={0.85}
                 >
-                    <Send size={20} color="white" />
-                    <Text style={styles.submitButtonText}>
-                        Enviar solicitud
-                    </Text>
+                    {isSubmitting ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                        <>
+                            <Send size={18} color="#ffffff" />
+                            <Text style={styles.submitBtnText}>
+                                Enviar Solicitud de Soporte
+                            </Text>
+                        </>
+                    )}
                 </TouchableOpacity>
             </ScrollView>
 
-            {/* Motivo Select Modal */}
+            {/* Motivo Selector Modal using Common Modal */}
             <Modal
                 visible={showMotivoModal}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setShowMotivoModal(false)}
+                onClose={() => setShowMotivoModal(false)}
+                title="Motivo de Contacto"
+                icon={<HelpCircle size={32} color="#0284c7" />}
+                footerText="Cerrar"
             >
-                <Pressable 
-                    style={styles.modalOverlay} 
-                    onPress={() => setShowMotivoModal(false)}
-                >
-                    <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>
-                            Selecciona un motivo
-                        </Text>
-                        <ScrollView style={styles.modalScrollView}>
-                            {MOTIVOS.map((motivo) => (
-                                <TouchableOpacity
-                                    key={motivo}
-                                    style={[
-                                        styles.modalOption,
-                                        {
-                                            backgroundColor: formData.motivo === motivo
-                                                ? "#0284c7"
-                                                : colors.background
-                                        }
-                                    ]}
-                                    onPress={() => selectMotivo(motivo)}
-                                >
-                                    <Text style={[
-                                        styles.modalOptionText,
-                                        {
-                                            color: formData.motivo === motivo
-                                                ? "white"
-                                                : colors.text
-                                        }
-                                    ]}>
-                                        {motivo}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                </Pressable>
+                <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                    {MOTIVOS.map((motivo) => {
+                        const isSelected = formData.motivo === motivo;
+                        return (
+                            <TouchableOpacity
+                                key={motivo}
+                                style={[
+                                    styles.reasonOption,
+                                    {
+                                        backgroundColor: isSelected
+                                            ? (darkMode ? "rgba(2, 132, 199, 0.2)" : "#f0f9ff")
+                                            : (darkMode ? "#1e293b" : "#f8fafc"),
+                                        borderColor: isSelected ? "#0284c7" : (darkMode ? "#334155" : "#e2e8f0")
+                                    }
+                                ]}
+                                onPress={() => selectMotivo(motivo)}
+                            >
+                                <Text style={[
+                                    styles.reasonOptionText,
+                                    { color: isSelected ? "#0284c7" : colors.text }
+                                ]}>
+                                    {motivo}
+                                </Text>
+                                {isSelected && <Check size={18} color="#0284c7" />}
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
+            </Modal>
+
+            {/* Response / Feedback Modal using Common Modal */}
+            <Modal
+                visible={responseModal.visible}
+                onClose={handleCloseResponseModal}
+                title={responseModal.isSuccess ? "Solicitud Enviada" : "Atención"}
+                icon={
+                    responseModal.isSuccess ? (
+                        <CheckCircle2 size={46} color="#16a34a" />
+                    ) : (
+                        <AlertCircle size={46} color="#ef4444" />
+                    )
+                }
+                footerText={responseModal.isSuccess ? "Aceptar" : "Reintentar"}
+            >
+                <View style={styles.modalMessageContainer}>
+                    <Text style={[styles.modalMessageText, { color: colors.text }]}>
+                        {responseModal.message}
+                    </Text>
+                </View>
             </Modal>
         </SafeAreaView>
     );

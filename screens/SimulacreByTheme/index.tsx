@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     KeyboardAvoidingView,
     Modal,
@@ -26,74 +27,82 @@ import {
     X,
 } from "lucide-react-native";
 
+import { useAreaQuery } from "../../services/question/area.rtkq";
+import { useSpecialtyQuery } from "../../services/question/specialty.rtkq";
+import { useExamTypeQuery } from "../../services/question/exam-type.rtkq";
+import { useThemeQuery } from "../../services/question/theme.rtkq";
+import { useLazyQuestionByThemeQuery } from "../../services/question/question.rtkq";
+import { useExamMutation } from "../../services/question/exam.rtkq";
+import { decryptLaravel } from "../../utils/encryption";
+
 export default function SimulacreByThemeScreen() {
   const { colors, darkMode, toggleDarkMode } = useTheme();
+  const [createExam] = useExamMutation();
+  const [fetchQuestionsByTheme, { isLoading: isLoadingQuestions }] = useLazyQuestionByThemeQuery();
   const router = useRouter();
 
   // Form state
-  const [medicalSpecialty, setMedicalSpecialty] = useState("");
-  const [themeType, setThemeType] = useState("");
-  const [specificTheme, setSpecificTheme] = useState("");
+  const [area, setArea] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [examType, setExamType] = useState("");
+  const [theme, setTheme] = useState("");
   const [examMode, setExamMode] = useState("");
 
+  // RTK Query API calls
+  const { data: areasData = [], isLoading: areasLoading } = useAreaQuery();
+
+  // Find selected area ID to query specialties
+  const selectedAreaId = useMemo(() => {
+    return areasData.find((a: any) => a.name === area)?.id || 0;
+  }, [areasData, area]);
+
+  const { data: specialtiesData = [], isLoading: specialtiesLoading } = useSpecialtyQuery(
+    { area: selectedAreaId },
+    { skip: !selectedAreaId }
+  );
+
+  // Find selected specialty ID to query themes
+  const selectedSpecialtyId = useMemo(() => {
+    return specialtiesData.find((s: any) => s.name === specialty)?.id || 0;
+  }, [specialtiesData, specialty]);
+
+  const { data: examTypesData = [], isLoading: examTypesLoading } = useExamTypeQuery();
+
+  const { data: themesData = [], isLoading: themesLoading } = useThemeQuery(
+    { specialty: selectedSpecialtyId },
+    { skip: !selectedSpecialtyId }
+  );
+
   // Modal states
+  const [showAreaModal, setShowAreaModal] = useState(false);
   const [showSpecialtyModal, setShowSpecialtyModal] = useState(false);
-  const [showThemeTypeModal, setShowThemeTypeModal] = useState(false);
-  const [showSpecificThemeModal, setShowSpecificThemeModal] = useState(false);
+  const [showExamTypeModal, setShowExamTypeModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
   const [showExamModeModal, setShowExamModeModal] = useState(false);
 
   // Search states
+  const [areaSearch, setAreaSearch] = useState("");
   const [specialtySearch, setSpecialtySearch] = useState("");
-  const [themeTypeSearch, setThemeTypeSearch] = useState("");
-  const [specificThemeSearch, setSpecificThemeSearch] = useState("");
+  const [examTypeSearch, setExamTypeSearch] = useState("");
+  const [themeSearch, setThemeSearch] = useState("");
   const [examModeSearch, setExamModeSearch] = useState("");
 
-  // Options - Medical Specialties
-  const medicalSpecialties = [
-    { id: "1", name: "Medicina General" },
-    { id: "2", name: "Cardiología" },
-    { id: "3", name: "Pediatría" },
-    { id: "4", name: "Ginecología y Obstetricia" },
-    { id: "5", name: "Cirugía General" },
-    { id: "6", name: "Medicina Interna" },
-    { id: "7", name: "Neurología" },
-    { id: "8", name: "Psiquiatría" },
-    { id: "9", name: "Dermatología" },
-    { id: "10", name: "Oftalmología" },
-    { id: "11", name: "Otorrinolaringología" },
-    { id: "12", name: "Ortopedia y Traumatología" },
-    { id: "13", name: "Urología" },
-    { id: "14", name: "Oncología" },
-    { id: "15", name: "Medicina de Emergencia" },
-  ];
+  // Mapped options
+  const areas = useMemo(() => {
+    return areasData.map((item: any) => ({ id: item.id.toString(), name: item.name }));
+  }, [areasData]);
 
-  // Options - Theme Types
-  const themeTypes = [
-    { id: "1", name: "Anatomía" },
-    { id: "2", name: "Fisiología" },
-    { id: "3", name: "Farmacología" },
-    { id: "4", name: "Patología" },
-    { id: "5", name: "Semiología" },
-    { id: "6", name: "Bioquímica" },
-    { id: "7", name: "Microbiología" },
-    { id: "8", name: "Inmunología" },
-    { id: "9", name: "Genética" },
-    { id: "10", name: "Epidemiología" },
-  ];
+  const specialties = useMemo(() => {
+    return specialtiesData.map((item: any) => ({ id: item.id.toString(), name: item.name }));
+  }, [specialtiesData]);
 
-  // Options - Specific Themes (would depend on previous selections in a real app)
-  const specificThemes = [
-    { id: "1", name: "Sistema Cardiovascular" },
-    { id: "2", name: "Sistema Respiratorio" },
-    { id: "3", name: "Sistema Digestivo" },
-    { id: "4", name: "Sistema Nervioso" },
-    { id: "5", name: "Sistema Endocrino" },
-    { id: "6", name: "Sistema Renal" },
-    { id: "7", name: "Sistema Hematopoyético" },
-    { id: "8", name: "Sistema Musculoesquelético" },
-    { id: "9", name: "Sistema Inmunológico" },
-    { id: "10", name: "Sistema Reproductor" },
-  ];
+  const examTypes = useMemo(() => {
+    return examTypesData.map((item: any) => ({ id: item.exam, name: item.exam }));
+  }, [examTypesData]);
+
+  const themes = useMemo(() => {
+    return themesData.map((item: any) => ({ id: item.id.toString(), name: item.theme }));
+  }, [themesData]);
 
   const examModes = [
     {
@@ -110,52 +119,65 @@ export default function SimulacreByThemeScreen() {
     }
   ];
 
-  // Filtered data
+  // Filtered data for search
+  const filteredAreas = useMemo(() => {
+    return areas.filter((item) =>
+      item.name.toLowerCase().includes(areaSearch.toLowerCase())
+    );
+  }, [areas, areaSearch]);
+
   const filteredSpecialties = useMemo(() => {
-    return medicalSpecialties.filter((specialty) =>
-      specialty.name.toLowerCase().includes(specialtySearch.toLowerCase())
+    return specialties.filter((item) =>
+      item.name.toLowerCase().includes(specialtySearch.toLowerCase())
     );
-  }, [specialtySearch]);
+  }, [specialties, specialtySearch]);
 
-  const filteredThemeTypes = useMemo(() => {
-    return themeTypes.filter((type) =>
-      type.name.toLowerCase().includes(themeTypeSearch.toLowerCase())
+  const filteredExamTypes = useMemo(() => {
+    return examTypes.filter((item) =>
+      item.name.toLowerCase().includes(examTypeSearch.toLowerCase())
     );
-  }, [themeTypeSearch]);
+  }, [examTypes, examTypeSearch]);
 
-  const filteredSpecificThemes = useMemo(() => {
-    return specificThemes.filter((theme) =>
-      theme.name.toLowerCase().includes(specificThemeSearch.toLowerCase())
+  const filteredThemes = useMemo(() => {
+    return themes.filter((item) =>
+      item.name.toLowerCase().includes(themeSearch.toLowerCase())
     );
-  }, [specificThemeSearch]);
+  }, [themes, themeSearch]);
 
   const filteredExamModes = useMemo(() => {
     return examModes.filter((mode) =>
       mode.name.toLowerCase().includes(examModeSearch.toLowerCase())
     );
-  }, [examModeSearch]);
+  }, [examModes, examModeSearch]);
 
-  const selectSpecialty = (specialty: { id: string; name: string }) => {
-    setMedicalSpecialty(specialty.name);
+  // Select handlers
+  const selectArea = (item: { id: string; name: string }) => {
+    setArea(item.name);
+    setShowAreaModal(false);
+    setAreaSearch("");
+    // Reset dependent selections
+    setSpecialty("");
+    setTheme("");
+  };
+
+  const selectSpecialty = (item: { id: string; name: string }) => {
+    setSpecialty(item.name);
     setShowSpecialtyModal(false);
     setSpecialtySearch("");
-    // Reset dependent selections
-    setThemeType("");
-    setSpecificTheme("");
-  };
-
-  const selectThemeType = (type: { id: string; name: string }) => {
-    setThemeType(type.name);
-    setShowThemeTypeModal(false);
-    setThemeTypeSearch("");
     // Reset dependent selection
-    setSpecificTheme("");
+    setTheme("");
   };
 
-  const selectSpecificTheme = (theme: { id: string; name: string }) => {
-    setSpecificTheme(theme.name);
-    setShowSpecificThemeModal(false);
-    setSpecificThemeSearch("");
+  const selectExamType = (item: { id: string; name: string }) => {
+    setExamType(item.name);
+    setShowExamTypeModal(false);
+    setExamTypeSearch("");
+  };
+
+  const selectTheme = (item: { id: string; name: string }) => {
+    setTheme(item.name);
+    setShowThemeModal(false);
+    setThemeSearch("");
   };
 
   const selectExamMode = (mode: { id: string; name: string }) => {
@@ -163,6 +185,19 @@ export default function SimulacreByThemeScreen() {
     setShowExamModeModal(false);
     setExamModeSearch("");
   };
+
+  // Render modal item helpers
+  const renderAreaItem = ({ item }: { item: { id: string; name: string } }) => (
+    <Pressable
+      style={styles.optionItem}
+      onPress={() => selectArea(item)}
+    >
+      <Text style={[styles.optionItemText, { color: colors.text }]}>
+        {item.name}
+      </Text>
+      {area === item.name && <Check size={18} color="#0284c7" />}
+    </Pressable>
+  );
 
   const renderSpecialtyItem = ({ item }: { item: { id: string; name: string } }) => (
     <Pressable
@@ -172,31 +207,31 @@ export default function SimulacreByThemeScreen() {
       <Text style={[styles.optionItemText, { color: colors.text }]}>
         {item.name}
       </Text>
-      {medicalSpecialty === item.name && <Check size={18} color="#0284c7" />}
+      {specialty === item.name && <Check size={18} color="#0284c7" />}
     </Pressable>
   );
 
-  const renderThemeTypeItem = ({ item }: { item: { id: string; name: string } }) => (
+  const renderExamTypeItem = ({ item }: { item: { id: string; name: string } }) => (
     <Pressable
       style={styles.optionItem}
-      onPress={() => selectThemeType(item)}
+      onPress={() => selectExamType(item)}
     >
       <Text style={[styles.optionItemText, { color: colors.text }]}>
         {item.name}
       </Text>
-      {themeType === item.name && <Check size={18} color="#0284c7" />}
+      {examType === item.name && <Check size={18} color="#0284c7" />}
     </Pressable>
   );
 
-  const renderSpecificThemeItem = ({ item }: { item: { id: string; name: string } }) => (
+  const renderThemeItem = ({ item }: { item: { id: string; name: string } }) => (
     <Pressable
       style={styles.optionItem}
-      onPress={() => selectSpecificTheme(item)}
+      onPress={() => selectTheme(item)}
     >
       <Text style={[styles.optionItemText, { color: colors.text }]}>
         {item.name}
       </Text>
-      {specificTheme === item.name && <Check size={18} color="#0284c7" />}
+      {theme === item.name && <Check size={18} color="#0284c7" />}
     </Pressable>
   );
 
@@ -247,7 +282,7 @@ export default function SimulacreByThemeScreen() {
     );
   };
 
-  const isFormValid = medicalSpecialty && themeType && specificTheme && examMode;
+  const isFormValid = area && specialty && examType && theme && examMode;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -297,85 +332,39 @@ export default function SimulacreByThemeScreen() {
           {/* Exam Details Section */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Selecciona el tema
+              Configurar Simulacro
             </Text>
 
-            {/* Especialidad Médica */}
+            {/* 1. Área */}
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.subtitle }]}>
-                Especialidad médica <Text style={styles.required}>*</Text>
+                Área <Text style={styles.required}>*</Text>
               </Text>
               <Pressable
-                style={[styles.selector, { backgroundColor: colors.card, borderColor: colors.subtitle }]}
-                onPress={() => setShowSpecialtyModal(true)}
+                style={[
+                  styles.selector,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.subtitle,
+                    opacity: areasLoading ? 0.7 : 1,
+                  }
+                ]}
+                onPress={() => !areasLoading && setShowAreaModal(true)}
+                disabled={areasLoading}
               >
-                <Text style={[styles.selectorText, medicalSpecialty ? { color: colors.text } : { color: colors.subtitle }]}>
-                  {medicalSpecialty || "Selecciona la especialidad"}
+                <Text style={[styles.selectorText, area ? { color: colors.text } : { color: colors.subtitle }]}>
+                  {areasLoading ? "Cargando..." : (area || "Selecciona el área")}
                 </Text>
                 <ChevronDown size={20} color={colors.subtitle} />
               </Pressable>
-            </View>
-
-            {/* Tipo de Tema */}
-            <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: medicalSpecialty ? colors.subtitle : "#94a3b8" }]}>
-                Tipo de tema <Text style={styles.required}>*</Text>
-              </Text>
-              <Pressable
-                style={[
-                  styles.selector,
-                  {
-                    backgroundColor: medicalSpecialty ? colors.card : "#f1f5f9",
-                    borderColor: medicalSpecialty ? colors.subtitle : "#e2e8f0",
-                    opacity: medicalSpecialty ? 1 : 0.6,
-                  },
-                ]}
-                onPress={() => medicalSpecialty && setShowThemeTypeModal(true)}
-                disabled={!medicalSpecialty}
-              >
-                <Text style={[styles.selectorText, themeType ? { color: colors.text } : { color: medicalSpecialty ? colors.subtitle : "#94a3b8" }]}>
-                  {themeType || (medicalSpecialty ? "Selecciona el tipo de tema" : "Selecciona primero la especialidad")}
-                </Text>
-                <ChevronDown size={20} color={medicalSpecialty ? colors.subtitle : "#94a3b8"} />
-              </Pressable>
-              {!medicalSpecialty && (
-                <Text style={[styles.helperText, { color: "#94a3b8" }]}>
-                  Debes seleccionar una especialidad primero
-                </Text>
-              )}
-            </View>
-
-            {/* Tema Específico */}
-            <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: themeType ? colors.subtitle : "#94a3b8" }]}>
-                Tema específico <Text style={styles.required}>*</Text>
-              </Text>
-              <Pressable
-                style={[
-                  styles.selector,
-                  {
-                    backgroundColor: themeType ? colors.card : "#f1f5f9",
-                    borderColor: themeType ? colors.subtitle : "#e2e8f0",
-                    opacity: themeType ? 1 : 0.6,
-                  },
-                ]}
-                onPress={() => themeType && setShowSpecificThemeModal(true)}
-                disabled={!themeType}
-              >
-                <Text style={[styles.selectorText, specificTheme ? { color: colors.text } : { color: themeType ? colors.subtitle : "#94a3b8" }]}>
-                  {specificTheme || (themeType ? "Selecciona el tema específico" : "Selecciona primero el tipo de tema")}
-                </Text>
-                <ChevronDown size={20} color={themeType ? colors.subtitle : "#94a3b8"} />
-              </Pressable>
-              {!themeType && (
-                <Text style={[styles.helperText, { color: "#94a3b8" }]}>
-                  Debes seleccionar un tipo de tema primero
-                </Text>
-              )}
-              {specificTheme && (
+              {area && (
                 <Pressable
                   style={styles.clearButton}
-                  onPress={() => setSpecificTheme("")}
+                  onPress={() => {
+                    setArea("");
+                    setSpecialty("");
+                    setTheme("");
+                  }}
                 >
                   <X size={16} color="#ef4444" />
                   <Text style={styles.clearButtonText}>Limpiar</Text>
@@ -383,37 +372,184 @@ export default function SimulacreByThemeScreen() {
               )}
             </View>
 
-            {/* Modo de Examen */}
+            {/* 2. Especialidad Médica */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: specificTheme ? colors.subtitle : "#94a3b8" }]}>
-                Modo de examen <Text style={styles.required}>*</Text>
+              <Text style={[styles.label, { color: (area && !specialtiesLoading) ? colors.subtitle : "#94a3b8" }]}>
+                Especialidad <Text style={styles.required}>*</Text>
               </Text>
               <Pressable
                 style={[
                   styles.selector,
                   {
-                    backgroundColor: specificTheme ? colors.card : "#f1f5f9",
-                    borderColor: specificTheme ? colors.subtitle : "#e2e8f0",
-                    opacity: specificTheme ? 1 : 0.6,
+                    backgroundColor: area ? colors.card : "#f1f5f9",
+                    borderColor: (area && !specialtiesLoading) ? colors.subtitle : "#e2e8f0",
+                    opacity: (area && !specialtiesLoading) ? 1 : 0.6,
                   },
                 ]}
-                onPress={() => specificTheme && setShowExamModeModal(true)}
-                disabled={!specificTheme}
+                onPress={() => area && !specialtiesLoading && setShowSpecialtyModal(true)}
+                disabled={!area || specialtiesLoading}
               >
-                <Text style={[styles.selectorText, examMode ? { color: colors.text } : { color: specificTheme ? colors.subtitle : "#94a3b8" }]}>
-                  {examMode || (specificTheme ? "Selecciona el modo de examen" : "Selecciona primero el tema específico")}
+                <Text style={[styles.selectorText, specialty ? { color: colors.text } : { color: area ? colors.subtitle : "#94a3b8" }]}>
+                  {specialtiesLoading ? "Cargando..." : (specialty || (area ? "Selecciona la especialidad" : "Selecciona primero el área"))}
                 </Text>
-                <ChevronDown size={20} color={specificTheme ? colors.subtitle : "#94a3b8"} />
+                <ChevronDown size={20} color={area ? colors.subtitle : "#94a3b8"} />
               </Pressable>
-              {!specificTheme && (
+              {!area && (
                 <Text style={[styles.helperText, { color: "#94a3b8" }]}>
-                  Debes seleccionar un tema específico primero
+                  Debes seleccionar un área primero
                 </Text>
               )}
+              {specialty && (
+                <Pressable
+                  style={styles.clearButton}
+                  onPress={() => {
+                    setSpecialty("");
+                    setTheme("");
+                  }}
+                >
+                  <X size={16} color="#ef4444" />
+                  <Text style={styles.clearButtonText}>Limpiar</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {/* 3. Tipo de Examen */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: colors.subtitle }]}>
+                Tipo de examen <Text style={styles.required}>*</Text>
+              </Text>
+              <Pressable
+                style={[
+                  styles.selector,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.subtitle,
+                    opacity: examTypesLoading ? 0.7 : 1,
+                  }
+                ]}
+                onPress={() => !examTypesLoading && setShowExamTypeModal(true)}
+                disabled={examTypesLoading}
+              >
+                <Text style={[styles.selectorText, examType ? { color: colors.text } : { color: colors.subtitle }]}>
+                  {examTypesLoading ? "Cargando..." : (examType || "Selecciona el tipo de examen")}
+                </Text>
+                <ChevronDown size={20} color={colors.subtitle} />
+              </Pressable>
+              {examType && (
+                <Pressable
+                  style={styles.clearButton}
+                  onPress={() => setExamType("")}
+                >
+                  <X size={16} color="#ef4444" />
+                  <Text style={styles.clearButtonText}>Limpiar</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {/* 4. Tema */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: (specialty && !themesLoading) ? colors.subtitle : "#94a3b8" }]}>
+                Tema <Text style={styles.required}>*</Text>
+              </Text>
+              <Pressable
+                style={[
+                  styles.selector,
+                  {
+                    backgroundColor: specialty ? colors.card : "#f1f5f9",
+                    borderColor: (specialty && !themesLoading) ? colors.subtitle : "#e2e8f0",
+                    opacity: (specialty && !themesLoading) ? 1 : 0.6,
+                  },
+                ]}
+                onPress={() => specialty && !themesLoading && setShowThemeModal(true)}
+                disabled={!specialty || themesLoading}
+              >
+                <Text style={[styles.selectorText, theme ? { color: colors.text } : { color: specialty ? colors.subtitle : "#94a3b8" }]}>
+                  {themesLoading ? "Cargando..." : (theme || (specialty ? "Selecciona el tema" : "Selecciona primero la especialidad"))}
+                </Text>
+                <ChevronDown size={20} color={specialty ? colors.subtitle : "#94a3b8"} />
+              </Pressable>
+              {!specialty && (
+                <Text style={[styles.helperText, { color: "#94a3b8" }]}>
+                  Debes seleccionar una especialidad primero
+                </Text>
+              )}
+              {theme && (
+                <Pressable
+                  style={styles.clearButton}
+                  onPress={() => setTheme("")}
+                >
+                  <X size={16} color="#ef4444" />
+                  <Text style={styles.clearButtonText}>Limpiar</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {/* 5. Modo de Examen */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: colors.subtitle }]}>
+                Modo de examen <Text style={styles.required}>*</Text>
+              </Text>
+              <Pressable
+                style={[styles.selector, { backgroundColor: colors.card, borderColor: colors.subtitle }]}
+                onPress={() => setShowExamModeModal(true)}
+              >
+                <Text style={[styles.selectorText, examMode ? { color: colors.text } : { color: colors.subtitle }]}>
+                  {examMode || "Selecciona el modo de examen"}
+                </Text>
+                <ChevronDown size={20} color={colors.subtitle} />
+              </Pressable>
             </View>
           </View>
 
-          {/* Medical Specialty Modal */}
+          {/* Area Modal */}
+          <Modal
+            visible={showAreaModal}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setShowAreaModal(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>
+                    Seleccionar Área
+                  </Text>
+                  <Pressable onPress={() => setShowAreaModal(false)}>
+                    <X size={24} color={colors.text} />
+                  </Pressable>
+                </View>
+
+                <View style={[styles.searchContainer, { borderBottomColor: colors.subtitle, marginHorizontal: 15 }]}>
+                  <Search size={18} color={colors.subtitle} />
+                  <TextInput
+                    style={[styles.searchInput, { color: colors.text }]}
+                    placeholder="Buscar área..."
+                    placeholderTextColor={colors.subtitle}
+                    value={areaSearch}
+                    onChangeText={setAreaSearch}
+                  />
+                </View>
+
+                <FlatList
+                  data={filteredAreas}
+                  renderItem={renderAreaItem}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={{ paddingHorizontal: 15 }}
+                  ListEmptyComponent={() => (
+                    <View style={{ padding: 20, alignItems: "center" }}>
+                      {areasLoading ? (
+                        <ActivityIndicator size="small" color="#0284c7" />
+                      ) : (
+                        <Text style={{ color: colors.subtitle }}>No se encontraron áreas</Text>
+                      )}
+                    </View>
+                  )}
+                />
+              </View>
+            </View>
+          </Modal>
+
+          {/* Specialty Modal */}
           <Modal
             visible={showSpecialtyModal}
             animationType="slide"
@@ -424,7 +560,7 @@ export default function SimulacreByThemeScreen() {
               <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
-                    Especialidad Médica
+                    Seleccionar Especialidad
                   </Text>
                   <Pressable onPress={() => setShowSpecialtyModal(false)}>
                     <X size={24} color={colors.text} />
@@ -435,7 +571,7 @@ export default function SimulacreByThemeScreen() {
                   <Search size={18} color={colors.subtitle} />
                   <TextInput
                     style={[styles.searchInput, { color: colors.text }]}
-                    placeholder="Buscar..."
+                    placeholder="Buscar especialidad..."
                     placeholderTextColor={colors.subtitle}
                     value={specialtySearch}
                     onChangeText={setSpecialtySearch}
@@ -447,25 +583,34 @@ export default function SimulacreByThemeScreen() {
                   renderItem={renderSpecialtyItem}
                   keyExtractor={(item) => item.id}
                   contentContainerStyle={{ paddingHorizontal: 15 }}
+                  ListEmptyComponent={() => (
+                    <View style={{ padding: 20, alignItems: "center" }}>
+                      {specialtiesLoading ? (
+                        <ActivityIndicator size="small" color="#0284c7" />
+                      ) : (
+                        <Text style={{ color: colors.subtitle }}>No se encontraron especialidades</Text>
+                      )}
+                    </View>
+                  )}
                 />
               </View>
             </View>
           </Modal>
 
-          {/* Theme Type Modal */}
+          {/* Exam Type Modal */}
           <Modal
-            visible={showThemeTypeModal}
+            visible={showExamTypeModal}
             animationType="slide"
             transparent={true}
-            onRequestClose={() => setShowThemeTypeModal(false)}
+            onRequestClose={() => setShowExamTypeModal(false)}
           >
             <View style={styles.modalOverlay}>
               <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
-                    Tipo de Tema
+                    Tipo de Examen
                   </Text>
-                  <Pressable onPress={() => setShowThemeTypeModal(false)}>
+                  <Pressable onPress={() => setShowExamTypeModal(false)}>
                     <X size={24} color={colors.text} />
                   </Pressable>
                 </View>
@@ -474,37 +619,46 @@ export default function SimulacreByThemeScreen() {
                   <Search size={18} color={colors.subtitle} />
                   <TextInput
                     style={[styles.searchInput, { color: colors.text }]}
-                    placeholder="Buscar..."
+                    placeholder="Buscar tipo de examen..."
                     placeholderTextColor={colors.subtitle}
-                    value={themeTypeSearch}
-                    onChangeText={setThemeTypeSearch}
+                    value={examTypeSearch}
+                    onChangeText={setExamTypeSearch}
                   />
                 </View>
 
                 <FlatList
-                  data={filteredThemeTypes}
-                  renderItem={renderThemeTypeItem}
+                  data={filteredExamTypes}
+                  renderItem={renderExamTypeItem}
                   keyExtractor={(item) => item.id}
                   contentContainerStyle={{ paddingHorizontal: 15 }}
+                  ListEmptyComponent={() => (
+                    <View style={{ padding: 20, alignItems: "center" }}>
+                      {examTypesLoading ? (
+                        <ActivityIndicator size="small" color="#0284c7" />
+                      ) : (
+                        <Text style={{ color: colors.subtitle }}>No se encontraron tipos de examen</Text>
+                      )}
+                    </View>
+                  )}
                 />
               </View>
             </View>
           </Modal>
 
-          {/* Specific Theme Modal */}
+          {/* Theme Modal */}
           <Modal
-            visible={showSpecificThemeModal}
+            visible={showThemeModal}
             animationType="slide"
             transparent={true}
-            onRequestClose={() => setShowSpecificThemeModal(false)}
+            onRequestClose={() => setShowThemeModal(false)}
           >
             <View style={styles.modalOverlay}>
               <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
-                    Tema Específico
+                    Seleccionar Tema
                   </Text>
-                  <Pressable onPress={() => setShowSpecificThemeModal(false)}>
+                  <Pressable onPress={() => setShowThemeModal(false)}>
                     <X size={24} color={colors.text} />
                   </Pressable>
                 </View>
@@ -513,18 +667,27 @@ export default function SimulacreByThemeScreen() {
                   <Search size={18} color={colors.subtitle} />
                   <TextInput
                     style={[styles.searchInput, { color: colors.text }]}
-                    placeholder="Buscar..."
+                    placeholder="Buscar tema..."
                     placeholderTextColor={colors.subtitle}
-                    value={specificThemeSearch}
-                    onChangeText={setSpecificThemeSearch}
+                    value={themeSearch}
+                    onChangeText={setThemeSearch}
                   />
                 </View>
 
                 <FlatList
-                  data={filteredSpecificThemes}
-                  renderItem={renderSpecificThemeItem}
+                  data={filteredThemes}
+                  renderItem={renderThemeItem}
                   keyExtractor={(item) => item.id}
                   contentContainerStyle={{ paddingHorizontal: 15 }}
+                  ListEmptyComponent={() => (
+                    <View style={{ padding: 20, alignItems: "center" }}>
+                      {themesLoading ? (
+                        <ActivityIndicator size="small" color="#0284c7" />
+                      ) : (
+                        <Text style={{ color: colors.subtitle }}>No se encontraron temas</Text>
+                      )}
+                    </View>
+                  )}
                 />
               </View>
             </View>
@@ -563,7 +726,6 @@ export default function SimulacreByThemeScreen() {
             </View>
           </Modal>
 
-
           {/* Configuration Section */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -576,7 +738,7 @@ export default function SimulacreByThemeScreen() {
                 Tiempo límite:
               </Text>
               <Text style={[styles.configValue, { color: colors.text }]}>
-                200 minutos
+                30 minutos
               </Text>
             </View>
 
@@ -591,32 +753,73 @@ export default function SimulacreByThemeScreen() {
             </View>
           </View>
 
-
           {/* Create Button */}
           <Pressable
             style={[
               styles.createButton,
               { backgroundColor: isFormValid ? "#0284c7" : "#94a3b8" }
             ]}
-            onPress={() => {
-              router.push({
-                pathname: "/questions",
-                params: {
-                  examType: "Examen por tema",
-                  specialty: `${medicalSpecialty} - ${themeType}`,
-                  examMode,
-                  questionCount: "20",
-                  timeLimit: "30",
-                },
-              });
+            onPress={async () => {
+              try {
+                // 1. Get selected theme ID from themes data
+                const selectedThemeObj = themes.find(t => t.name === theme);
+                const themeIdToSend = selectedThemeObj?.id || "0";
+
+                // 2. Fetch questions from /quiz/question/theme
+                const result = await fetchQuestionsByTheme({
+                  id: themeIdToSend,
+                }).unwrap();
+
+                // 3. Decrypt encrypted fields
+                const decryptedQuestions = result.map((question: any) => ({
+                  ...question,
+                  data: decryptLaravel(question.data),
+                  justification: question.justification ? decryptLaravel(question.justification) : '',
+                  distractorAnalysis: question.distractorAnalysis ? decryptLaravel(question.distractorAnalysis) : '',
+                  reference: question.reference ? decryptLaravel(question.reference) : '',
+                }));
+
+                // 4. Create initial exam record
+                let createdExamId = "";
+                try {
+                  const examRes = await createExam({
+                    exam_type: "by_topic",
+                    title: `Examen por tema - ${specialty}`,
+                    description: `${theme} (${decryptedQuestions.length} preguntas)`,
+                    total_questions: decryptedQuestions.length,
+                    started_at: new Date().toISOString(),
+                  }).unwrap();
+                  createdExamId = examRes?.exam || "";
+                } catch (examErr) {
+                  console.error("Error creating exam by topic:", examErr);
+                }
+
+                // 5. Navigate to questions screen
+                router.push({
+                  pathname: "/questions",
+                  params: {
+                    examId: createdExamId,
+                    examType: "Examen por tema",
+                    area: area || undefined,
+                    specialty: specialty || undefined,
+                    theme: theme || undefined,
+                    examMode,
+                    sourceKey: "by_topic",
+                    questionCount: decryptedQuestions.length.toString(),
+                    timeLimit: "30",
+                    questions: JSON.stringify(decryptedQuestions),
+                  },
+                });
+              } catch (error) {
+                console.error('Error fetching questions by theme:', error);
+              }
             }}
-            disabled={!isFormValid}
+            disabled={!isFormValid || isLoadingQuestions}
           >
             <Text style={styles.createButtonText}>
-              Iniciar Examen
+              {isLoadingQuestions ? "Cargando..." : "Iniciar Examen"}
             </Text>
           </Pressable>
-
 
           {/* Bottom spacing */}
           <View style={styles.bottomSpacing} />

@@ -9,6 +9,8 @@ interface ModalProps {
   children: React.ReactNode;
   icon?: React.ReactNode;
   logoSource?: any;
+  showFooter?: boolean;
+  footerText?: string;
 }
 
 const { width } = Dimensions.get('window');
@@ -20,6 +22,8 @@ const Modal = memo<ModalProps>(function Modal({
   children,
   icon,
   logoSource,
+  showFooter = true,
+  footerText = "Aceptar",
 }) {
   const { colors } = useTheme();
 
@@ -50,16 +54,18 @@ const Modal = memo<ModalProps>(function Modal({
           </View>
 
           {/* Footer con acción principal */}
-          <View style={styles.footer}>
-            <Pressable 
-              style={[styles.primaryButton, { backgroundColor: colors.buttonBg }]} 
-              onPress={onClose}
-            >
-              <Text style={[styles.primaryButtonText, { color: colors.buttonText }]}>
-                Aceptar
-              </Text>
-            </Pressable>
-          </View>
+          {showFooter && (
+            <View style={styles.footer}>
+              <Pressable 
+                style={[styles.primaryButton, { backgroundColor: colors.buttonBg }]} 
+                onPress={onClose}
+              >
+                <Text style={[styles.primaryButtonText, { color: colors.buttonText }]}>
+                  {footerText}
+                </Text>
+              </Pressable>
+            </View>
+          )}
 
         </View>
       </View>

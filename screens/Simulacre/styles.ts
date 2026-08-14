@@ -23,6 +23,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+  },
+  optionCardPressed: {
+    borderColor: "#0284c7",
+    backgroundColor: "#f0f9ff",
   },
   iconContainer: {
     width: 56,

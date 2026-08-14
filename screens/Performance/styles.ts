@@ -12,288 +12,418 @@ export const styles = StyleSheet.create({
 
     backButton: {
         padding: 8,
+        borderRadius: 8,
     },
 
     headerTitle: {
         fontSize: 18,
-        fontWeight: "bold",
+        fontWeight: "700",
+        letterSpacing: -0.3,
     },
 
     notification: {
         padding: 8,
+        borderRadius: 8,
     },
 
     container: {
         flex: 1,
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
     },
 
     section: {
-        marginBottom: 20,
+        marginBottom: 24,
+    },
+
+    sectionHeader: {
+        marginBottom: 12,
     },
 
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 12,
+        fontSize: 16,
+        fontWeight: "700",
+        letterSpacing: -0.3,
     },
 
-    // Heat Map
-    heatMapContainer: {
-        padding: 4,
-        width: 252,
-        alignSelf: "center",
+    sectionSubtitle: {
+        fontSize: 13,
+        marginTop: 2,
+        lineHeight: 18,
     },
 
-    heatMapHeader: {
+    // ==========================================
+    // RANKING SUMMARY CARD
+    // ==========================================
+    rankingCard: {
+        borderRadius: 16,
+        padding: 18,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: "rgba(0, 0, 0, 0.06)",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+
+    rankingCardHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 12,
+        marginBottom: 14,
     },
 
-    heatMapTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-    },
-
-    heatMapLegend: {
+    rankingCardHeaderLeft: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 4,
+        gap: 8,
     },
 
-    heatMapLegendText: {
-        fontSize: 10,
-    },
-
-    legendBox: {
-        width: 12,
-        height: 12,
-        borderRadius: 2,
-    },
-
-    weekDaysRow: {
-        flexDirection: "row",
-        justifyContent: "flex-start",
-        marginBottom: 8,
-        gap: 4,
-    },
-
-    weekDayText: {
-        fontSize: 11,
+    rankingIconBadge: {
         width: 32,
-        textAlign: "center",
-        fontWeight: "500",
-    },
-
-    heatMapGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        justifyContent: "flex-start",
-        gap: 4,
-    },
-    weeksContainer: {
-        gap: 4,
-    },
-    weekRow: {
-        flexDirection: "row",
-        gap: 4,
-    },
-
-    heatMapCell: {
-        width: 32,
-        height: 28,
-        borderRadius: 4,
+        height: 32,
+        borderRadius: 8,
+        backgroundColor: "#fef3c7",
         justifyContent: "center",
         alignItems: "center",
     },
 
-    heatMapDayText: {
-        fontSize: 10,
+    rankingCardTitle: {
+        fontSize: 15,
+        fontWeight: "700",
+    },
+
+    rankingTotalPill: {
+        paddingHorizontal: 9,
+        paddingVertical: 4,
+        borderRadius: 8,
+        backgroundColor: "rgba(2, 132, 199, 0.08)",
+    },
+
+    rankingTotalPillText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#0284c7",
+    },
+
+    rankingMainRow: {
+        flexDirection: "row",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        marginBottom: 14,
+    },
+
+    rankingRankNumber: {
+        fontSize: 32,
+        fontWeight: "800",
+        letterSpacing: -0.5,
+    },
+
+    rankingRankLabel: {
+        fontSize: 13,
         fontWeight: "500",
     },
 
-    // Stats Row
-    statsRow: {
-        flexDirection: "row",
-        gap: 12,
-        marginBottom: 16,
-    },
-
-    timeStatCard: {
-        flex: 1,
-        padding: 16,
-        borderRadius: 14,
-        alignItems: "center",
-    },
-
-    timeStatValue: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginTop: 8,
-    },
-
-    timeStatLabel: {
-        fontSize: 12,
-        marginTop: 2,
-    },
-
-    // Ranking Card
-    rankingCard: {
-        padding: 16,
-        borderRadius: 16,
-        marginBottom: 16,
-    },
-
-    rankingHeader: {
+    rankingButton: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 8,
-        marginBottom: 12,
+        justifyContent: "space-between",
+        paddingVertical: 11,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+        backgroundColor: "rgba(2, 132, 199, 0.06)",
     },
 
-    rankingTitle: {
-        fontSize: 16,
+    rankingButtonText: {
+        fontSize: 13,
         fontWeight: "600",
+        color: "#0284c7",
     },
 
-    rankingContent: {
-        flexDirection: "column",
-        alignItems: "flex-end",
-        marginBottom: 12,
-        gap: 8,
-    },
-
-    rankingMain: {
+    // ==========================================
+    // SEGMENTED TABS
+    // ==========================================
+    tabsWrapper: {
         flexDirection: "row",
-        alignItems: "baseline",
-        gap: 8,
-        alignSelf: "flex-start",
-    },
-
-    rankingNumber: {
-        fontSize: 36,
-        fontWeight: "bold",
-    },
-
-    rankingLabel: {
-        fontSize: 14,
-    },
-
-    rankingPercentile: {
-        flexDirection: "row",
-        alignItems: "center",
+        borderRadius: 12,
+        padding: 4,
+        marginBottom: 16,
         gap: 4,
     },
 
-    percentileText: {
-        fontSize: 16,
+    tabItem: {
+        flex: 1,
+        paddingVertical: 9,
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 9,
+    },
+
+    tabItemActive: {
+        backgroundColor: "#0284c7",
+        shadowColor: "#0284c7",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+
+    tabItemText: {
+        fontSize: 13,
         fontWeight: "600",
+        color: "#64748b",
     },
 
-    rankingProgressBg: {
-        height: 8,
-        backgroundColor: "#e2e8f0",
-        borderRadius: 4,
-        overflow: "hidden",
+    tabItemTextActive: {
+        color: "#ffffff",
+        fontWeight: "700",
     },
 
-    rankingProgressFill: {
-        height: "100%",
-        backgroundColor: "#22c55e",
-        borderRadius: 4,
-    },
-
-    rankingLabels: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 4,
-    },
-
-    rankingLabelsText: {
-        fontSize: 10,
-    },
-
-    statsGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
+    // ==========================================
+    // PERFORMANCE LIST ITEMS
+    // ==========================================
+    performanceList: {
         gap: 12,
-        marginBottom: 20,
     },
-    statCard: { width: "48%", padding: 14, borderRadius: 14 },
-    statIconContainer: { width: 38, height: 38, borderRadius: 10, justifyContent: "center", alignItems: "center", marginBottom: 10 },
-    statTitle: { fontSize: 12, marginBottom: 2 },
-    statValue: { fontSize: 20, fontWeight: "bold" },
-    statSubtitle: { fontSize: 11, marginTop: 2 },
-    trendContainer: { flexDirection: "row", alignItems: "center", marginTop: 6, gap: 4 },
-    trendText: { fontSize: 11, fontWeight: "500" },
-    horizontalScroll: { gap: 12, paddingRight: 20 },
-    topicCard: { width: 110, padding: 14, borderRadius: 14, alignItems: "center" },
-    topicCardIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: "center", alignItems: "center", marginBottom: 10 },
-    topicCardName: { fontSize: 12, fontWeight: "500", textAlign: "center", marginBottom: 4 },
-    topicCardProgress: { fontSize: 18, fontWeight: "bold" },
-    seeMoreButton: { alignSelf: "center", marginTop: 12 },
-    seeMoreText: { color: "#0284c7", fontSize: 13, fontWeight: "500" },
-    swContainer: { marginBottom: 20 },
-    swSection: { marginBottom: 16 },
-    swHeaderRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
-    swTitle: { fontSize: 16, fontWeight: "600" },
-    swTagsRow: { flexDirection: "row", gap: 8 },
-    swTag: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
-    swTagText: { fontSize: 13, fontWeight: "500" },
-    historyCard: { width: 160, padding: 14, borderRadius: 14 },
-    historyCardHeader: { marginBottom: 12 },
-    historyCardType: { fontSize: 13, fontWeight: "600", marginBottom: 4 },
-    historyCardDate: { fontSize: 11 },
-    historyCardStats: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    historyCardScore: { fontSize: 20, fontWeight: "bold" },
-    historyCardMeta: { fontSize: 11 },
-    historyCardTime: { fontSize: 11 },
-    
-    // Block List Styles (Calendario Inteligente)
-    blockList: { gap: 10 },
-    blockCard: { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 14, gap: 12 },
-    blockNumber: { width: 40, height: 40, borderRadius: 10, justifyContent: "center", alignItems: "center" },
-    blockNumberText: { fontSize: 14, fontWeight: "700" },
-    blockContent: { flex: 1, gap: 2 },
-    blockTitle: { fontSize: 14, fontWeight: "600" },
-    blockSubtitle: { fontSize: 12 },
-    blockProgress: { fontSize: 18, fontWeight: "700" },
-    blockAction: { padding: 4 },
-    
-    bottomSpacing: { height: 40 },
-    
-    // Modal Styles
-    modalOverlay: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        justifyContent: "flex-end",
+
+    performanceCard: {
+        padding: 16,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: "rgba(0, 0, 0, 0.06)",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.03,
+        shadowRadius: 3,
+        elevation: 1,
     },
-    modalContent: {
-        height: "80%",
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        padding: 20,
-    },
-    modalHeader: {
+
+    performanceCardTop: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 16,
+        marginBottom: 8,
     },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: "bold",
-    },
-    modalClose: {
-        padding: 8,
-    },
-    modalScroll: {
+
+    performanceTitle: {
+        fontSize: 15,
+        fontWeight: "700",
         flex: 1,
+        marginRight: 10,
+    },
+
+    accuracyBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+
+    accuracyBadgeText: {
+        fontSize: 12,
+        fontWeight: "700",
+    },
+
+    progressBarBg: {
+        height: 6,
+        backgroundColor: "#f1f5f9",
+        borderRadius: 3,
+        overflow: "hidden",
+        marginBottom: 10,
+    },
+
+    progressBarFill: {
+        height: "100%",
+        borderRadius: 3,
+    },
+
+    statsRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingTop: 4,
+    },
+
+    statColumn: {
+        alignItems: "center",
+    },
+
+    statValue: {
+        fontSize: 13,
+        fontWeight: "700",
+    },
+
+    statLabel: {
+        fontSize: 11,
+        marginTop: 1,
+    },
+
+    statDivider: {
+        width: 1,
+        height: 20,
+        backgroundColor: "rgba(0, 0, 0, 0.08)",
+    },
+
+    // ==========================================
+    // PAGINATION CONTROLS
+    // ==========================================
+    paginationContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingVertical: 16,
+        paddingHorizontal: 4,
+        marginTop: 12,
+    },
+
+    paginationButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingVertical: 9,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+        backgroundColor: "rgba(2, 132, 199, 0.08)",
+    },
+
+    paginationButtonDisabled: {
+        opacity: 0.35,
+    },
+
+    paginationButtonText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#0284c7",
+    },
+
+    paginationIndicator: {
+        fontSize: 13,
+        fontWeight: "600",
+    },
+
+    // ==========================================
+    // EMPTY STATE
+    // ==========================================
+    emptyCard: {
+        padding: 32,
+        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: "rgba(0, 0, 0, 0.06)",
+    },
+
+    emptyIconBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: "rgba(2, 132, 199, 0.08)",
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+
+    emptyTitle: {
+        fontSize: 15,
+        fontWeight: "700",
+        textAlign: "center",
+        marginBottom: 4,
+    },
+
+    emptySubtitle: {
+        fontSize: 13,
+        textAlign: "center",
+        lineHeight: 18,
+        maxWidth: 260,
+    },
+
+    // ==========================================
+    // MODAL STYLES
+    // ==========================================
+    searchBox: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingHorizontal: 12,
+        borderWidth: 1,
+        borderRadius: 10,
+        marginBottom: 14,
+    },
+
+    searchInput: {
+        flex: 1,
+        paddingVertical: 9,
+        fontSize: 14,
+    },
+
+    rankingList: {
+        gap: 8,
+    },
+
+    rankingListItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "rgba(0, 0, 0, 0.04)",
+        gap: 12,
+    },
+
+    rankingPositionBadge: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    rankingPositionText: {
+        fontSize: 13,
+        fontWeight: "700",
+    },
+
+    rankingUserContent: {
+        flex: 1,
+    },
+
+    rankingUserName: {
+        fontSize: 14,
+        fontWeight: "600",
+    },
+
+    userHighlightBadge: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        backgroundColor: "#0284c7",
+        marginLeft: 6,
+        alignSelf: "center",
+    },
+
+    userHighlightText: {
+        fontSize: 10,
+        fontWeight: "700",
+        color: "#ffffff",
+    },
+
+    rankingUserUniv: {
+        fontSize: 12,
+        marginTop: 1,
+    },
+
+    rankingUserPoints: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#0284c7",
+    },
+
+    rankingUserPointsLabel: {
+        fontSize: 10,
+        textAlign: "right",
+    },
+
+    bottomSpacing: {
+        height: 40,
     },
 });

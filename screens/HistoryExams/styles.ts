@@ -148,4 +148,34 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
   },
+  paginationContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  paginationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: "rgba(2, 132, 199, 0.08)",
+  },
+  paginationButtonDisabled: {
+    opacity: 0.35,
+  },
+  paginationButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0284c7",
+  },
+  paginationIndicator: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
 });

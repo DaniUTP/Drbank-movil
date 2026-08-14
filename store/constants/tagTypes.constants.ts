@@ -6,5 +6,9 @@ export const enum TagTypes {
   Theme = 'Theme',
   Year = 'Year',
   Question = 'Question',
-  // Agregar más tags según necesites
+  QuestionByYear = 'QuestionByYear',
+  QuestionByTheme='QuestionByTheme',
+  Ranking='Ranking',
+  ChangePassword='ChangePassword',
+  Support='Support'
 }

@@ -12,28 +12,9 @@ export const styles = StyleSheet.create({
     borderBottomColor: "#f1f5f9",
     backgroundColor: "white",
   },
-
-  backButton: {
-    padding: 8,
-  },
-
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-    paddingHorizontal: 8,
-  },
-
-  headerTitle: {
-    fontSize: 15,
-    fontWeight: "bold",
-  },
-
-  headerSubtitle: {
-    fontSize: 11,
-    marginTop: 2,
-    opacity: 0.7,
-  },
-
+  backButton: { padding: 8 },
+  headerCenter: { flex: 1, alignItems: "center", paddingHorizontal: 8 },
+  headerTitle: { fontSize: 15, fontWeight: "bold" },
   timerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -42,16 +23,9 @@ export const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
   },
+  timerText: { fontSize: 14, fontWeight: "bold" },
 
-  timerText: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
+  container: { flex: 1, paddingHorizontal: 20 },
 
   questionContainer: {
     marginTop: 20,
@@ -64,63 +38,37 @@ export const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  questionHeader: { marginBottom: 20 },
+  questionNumber: { fontSize: 14, fontWeight: "500", marginBottom: 10 },
+  progressBar: { height: 8, backgroundColor: "#e2e8f0", borderRadius: 4, overflow: "hidden" },
+  progressFill: { height: "100%", borderRadius: 4 },
+  questionText: { fontSize: 18, fontWeight: "600", lineHeight: 26, marginBottom: 24, color: "#1e293b" },
+  optionsContainer: { gap: 12 },
 
-  questionHeader: {
-    marginBottom: 20,
-  },
-
-  questionNumber: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 10,
-  },
-
-  progressBar: {
-    height: 8,
-    backgroundColor: "#e2e8f0",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-
-  progressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-
-  questionText: {
-    fontSize: 18,
-    fontWeight: "600",
-    lineHeight: 26,
-    marginBottom: 24,
-    color: "#1e293b",
-  },
-
-  optionsContainer: {
-    gap: 12,
-  },
-
+  // ESTILO BASE DE LAS OPCIONES (SIN ICONOS)
   option: {
     borderWidth: 2,
+    borderColor: "#e2e8f0",
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+  },
+  optionSelected: {
+    borderColor: "#0284c7",
+    backgroundColor: "#e0f2fe",
+  },
+  optionCorrect: {
+    borderColor: "#22c55e",
+    backgroundColor: "#dcfce7",
+  },
+  optionIncorrect: {
+    borderColor: "#ef4444",
+    backgroundColor: "#fee2e2",
   },
 
-  optionContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    gap: 12,
-  },
-
+  optionContent: { flexDirection: "row", alignItems: "center", flex: 1, gap: 12 },
   optionLetter: {
     width: 36,
     height: 36,
@@ -129,295 +77,318 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  optionLetterSelected: { backgroundColor: "#0284c7" },
+  optionLetterCorrect: { backgroundColor: "#22c55e" },
+  optionLetterIncorrect: { backgroundColor: "#ef4444" },
+  optionLetterText: { fontSize: 15, fontWeight: "bold" },
+  optionText: { fontSize: 15, flex: 1, lineHeight: 22 },
 
-  optionLetterText: {
-    fontSize: 15,
-    fontWeight: "bold",
-  },
+  // FEEDBACK
+  feedbackSection: { marginTop: 20 },
+  feedbackContainer: { padding: 16, borderRadius: 16, alignItems: "center", marginBottom: 16 },
+  feedbackText: { fontSize: 16, fontWeight: "bold" },
 
-  optionText: {
-    fontSize: 15,
-    flex: 1,
-    lineHeight: 22,
-  },
-
-  feedbackContainer: {
-    marginTop: 20,
-    padding: 16,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-
-  feedbackText: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
-  navigationContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 30,
-    gap: 12,
-  },
-
-  navButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#0284c7",
-  },
-
-  navButtonDisabled: {
-    borderColor: "#94a3b8",
-  },
-
-  navButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-
+  navigationContainer: { flexDirection: "row", justifyContent: "space-between", marginTop: 30, gap: 12 },
+  navButton: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 16 },
+  navButtonSecondary: { borderWidth: 2, borderColor: "#e2e8f0", backgroundColor: "white" },
+  navButtonTextSecondary: { fontSize: 15, fontWeight: "600" },
+  navButtonDisabled: { opacity: 0.5 },
+  
   nextButton: {
     backgroundColor: "#0284c7",
-    borderColor: "#0284c7",
     shadowColor: "#0284c7",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
-
-  nextButtonText: {
-    color: "white",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+  nextButtonText: { color: "white", fontSize: 15, fontWeight: "600" },
 
   finishButton: {
     backgroundColor: "#0284c7",
-    borderColor: "#0284c7",
     shadowColor: "#0284c7",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
+  finishButtonText: { color: "white", fontSize: 15, fontWeight: "600" },
 
-  finishButtonText: {
-    color: "white",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+  bottomSpacing: { height: 40 },
 
-  bottomSpacing: {
-    height: 40,
-  },
-
-  resultsContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-
-  resultsHeader: {
-    alignItems: "center",
-    marginBottom: 30,
-  },
-
+  // RESULTADOS
+  resultsContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 },
+  resultsHeader: { alignItems: "center", marginBottom: 30 },
   resultsIconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#e0f2fe",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-    shadowColor: "#0284c7",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
+    width: 100, height: 100, borderRadius: 50, backgroundColor: "#e0f2fe",
+    justifyContent: "center", alignItems: "center", marginBottom: 20,
+    shadowColor: "#0284c7", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2, shadowRadius: 12, elevation: 6,
   },
-
-  resultsTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#1e293b",
-  },
-
-  resultsStats: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 30,
-  },
-
+  resultsTitle: { fontSize: 28, fontWeight: "bold", color: "#1e293b" },
+  resultsStats: { flexDirection: "row", gap: 16, marginBottom: 30 },
   statItem: {
-    alignItems: "center",
-    backgroundColor: "white",
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    minWidth: 100,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    alignItems: "center", backgroundColor: "white", paddingVertical: 24, paddingHorizontal: 20,
+    borderRadius: 20, minWidth: 100,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 8, elevation: 4,
   },
-
-  statValue: {
-    fontSize: 36,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-
-  statLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-
+  statValue: { fontSize: 36, fontWeight: "bold", marginBottom: 4 },
+  statLabel: { fontSize: 14, fontWeight: "500" },
   resultsTime: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 30,
-    backgroundColor: "white",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 30,
+    backgroundColor: "white", paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 8, elevation: 4,
   },
+  resultsTimeText: { fontSize: 18, fontWeight: "600" },
 
-  resultsTimeText: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
+  // MODALES
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
+  modalContent: { width: "100%", maxWidth: 400, borderRadius: 24, padding: 24, shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 10 },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: "bold" },
+  modalBody: { alignItems: "center", marginBottom: 30, flexDirection: "row", gap: 16 },
+  warningIconContainer: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#e0f2fe", justifyContent: "center", alignItems: "center" },
+  modalMessage: { fontSize: 16, lineHeight: 24, flex: 1, fontWeight: "500" },
+  modalFooter: { flexDirection: "row", justifyContent: "flex-end", gap: 12 },
+  modalButton: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, minWidth: 100, alignItems: "center" },
+  cancelButton: { backgroundColor: "transparent" },
+  confirmButton: { backgroundColor: "#0284c7" },
+  modalButtonText: { fontSize: 15, fontWeight: "600" },
+  modalButtonTextConfirm: { fontSize: 15, fontWeight: "600", color: "white" },
 
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  modalContent: {
-    width: "100%",
-    maxWidth: 400,
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  modalBody: {
-    alignItems: "center",
-    marginBottom: 30,
-    flexDirection: "row",
-    gap: 16,
-  },
-  warningIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#e0f2fe",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalMessage: {
-    fontSize: 16,
-    lineHeight: 24,
-    flex: 1,
-    fontWeight: "500",
-  },
-  modalFooter: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-  },
-  modalButton: {
+  // EXPLICACIONES & FEEDBACK MÉDICO
+  feedbackSection: { marginTop: 20 },
+  feedbackContainer: {
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 12,
-    minWidth: 100,
+    marginBottom: 8,
     alignItems: "center",
   },
-  cancelButton: {
-    backgroundColor: "transparent",
+  feedbackText: {
+    fontSize: 16,
+    fontWeight: "700",
   },
-  confirmButton: {
-    backgroundColor: "#0284c7",
+  feedbackTabsContainer: {
+    flexDirection: "row",
+    backgroundColor: "#f1f5f9",
+    borderRadius: 14,
+    padding: 4,
+    marginVertical: 12,
+    gap: 6,
   },
-  modalButtonText: {
-    fontSize: 15,
+  feedbackTabItem: {
+    flex: 1,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    gap: 6,
+  },
+  feedbackTabItemActive: {
+    backgroundColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  feedbackTabText: {
+    fontSize: 13.5,
     fontWeight: "600",
+    color: "#64748b",
   },
-  modalButtonTextConfirm: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "white",
+  feedbackTabTextActive: {
+    color: "#0f172a",
+    fontWeight: "700",
   },
   explanationImmediate: {
-    marginTop: 15,
-    backgroundColor: "#f0f9ff",
-    borderRadius: 16,
-    padding: 16,
+    marginTop: 4,
+    backgroundColor: "#f8fafc",
+    borderRadius: 18,
+    padding: 18,
     borderWidth: 1,
-    borderColor: "#e0f2fe",
+    borderColor: "#e2e8f0",
+    borderLeftWidth: 4,
+    borderLeftColor: "#0284c7",
   },
   explanationHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  explanationHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  explanationIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#e0f2fe",
+    alignItems: "center",
+    justifyContent: "center",
   },
   explanationTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#0369a1",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  explanationBadge: {
+    backgroundColor: "#dbeafe",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  explanationBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#1d4ed8",
+    letterSpacing: 0.5,
   },
   explanationText: {
     fontSize: 14,
     color: "#334155",
-    lineHeight: 20,
-    fontWeight: "500",
-    textAlign: "justify",
+    lineHeight: 23,
+    letterSpacing: 0.2,
+    fontWeight: "400",
   },
-  feedbackSection: {
-    marginTop: 20,
+  distractorImmediate: {
+    marginTop: 4,
+    backgroundColor: "#fffdfa",
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#fed7aa",
+    borderLeftWidth: 4,
+    borderLeftColor: "#ea580c",
   },
-  confirmIconContainer: {
+  distractorHeader: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
+    justifyContent: "space-between",
+    marginBottom: 12,
   },
-  cancelButtonText: {
-    color: "#64748b",
-    fontSize: 16,
+  distractorHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  distractorIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#ffedd5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  distractorTitle: {
+    fontSize: 15,
     fontWeight: "700",
+    color: "#0f172a",
   },
-  confirmButtonText: {
-    color: "white",
-    fontSize: 16,
+  distractorBadge: {
+    backgroundColor: "#fef3c7",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  distractorBadgeText: {
+    fontSize: 11,
     fontWeight: "700",
+    color: "#b45309",
+    letterSpacing: 0.5,
   },
+  distractorText: {
+    fontSize: 14,
+    color: "#334155",
+    lineHeight: 23,
+    letterSpacing: 0.2,
+    fontWeight: "400",
+  },
+  distractorList: {
+    marginTop: 4,
+    gap: 10,
+  },
+  distractorItemCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#fed7aa",
+    shadowColor: "#ea580c",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  distractorItemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 6,
+  },
+  distractorItemBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "#fca5a5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  distractorItemBadgeText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#dc2626",
+  },
+  distractorItemLabel: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#0f172a",
+    flex: 1,
+  },
+  distractorItemBody: {
+    fontSize: 13.5,
+    color: "#334155",
+    lineHeight: 21,
+    fontWeight: "400",
+  },
+  referenceImmediate: {
+    marginTop: 14,
+    backgroundColor: "#f5f3ff",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#ddd6fe",
+    borderLeftWidth: 3,
+    borderLeftColor: "#7c3aed",
+  },
+  referenceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+  },
+  referenceTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#6d28d9",
+  },
+  referenceText: {
+    fontSize: 13,
+    color: "#475569",
+    lineHeight: 20,
+    fontStyle: "italic",
+  },
+  
+  confirmIconContainer: { alignItems: "center", marginBottom: 20 },
+  cancelButtonText: { color: "#64748b", fontSize: 16, fontWeight: "700" },
+  confirmButtonText: { color: "white", fontSize: 16, fontWeight: "700" },
 });

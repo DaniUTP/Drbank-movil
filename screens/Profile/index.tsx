@@ -1,6 +1,8 @@
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
+    ActivityIndicator,
+    Alert,
     Modal,
     Pressable,
     ScrollView,
@@ -12,6 +14,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
+import { useProfileQuery } from "@/services/profile/profile.rtkq";
+import { useLazyChangePasswordQuery } from "@/services/profile/change-password.rtkq";
 
 import {
     ArrowLeft,
@@ -32,6 +36,11 @@ export default function ProfileScreen() {
     const { colors, darkMode, toggleDarkMode } = useTheme();
     const router = useRouter();
     
+    const { data: profileData, isLoading: isProfileLoading } = useProfileQuery();
+    const [triggerChangePassword, { isLoading: isChangingPassword }] = useLazyChangePasswordQuery();
+    const [passwordError, setPasswordError] = useState("");
+    const [passwordSuccess, setPasswordSuccess] = useState("");
+
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -41,36 +50,80 @@ export default function ProfileScreen() {
     const [editingField, setEditingField] = useState<string>("");
     const [tempValue, setTempValue] = useState("");
     
-    // User sample data
-    const userData = {
-        firstName: "Juan",
-        lastName: "Pérez García",
-        email: "juan.perez@email.com",
-        phone: "",
-        university: "Universidad Nacional Mayor de San Marcos"
-    };
-    
     const [formData, setFormData] = useState({
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email: userData.email,
-        phone: userData.phone,
-        university: userData.university,
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        university: "",
         currentPassword: "",
         newPassword: "",
         confirmPassword: ""
     });
+
+    React.useEffect(() => {
+        if (profileData) {
+            setFormData(prev => ({
+                ...prev,
+                firstName: profileData.name || "",
+                lastName: profileData.last_name || "",
+                email: profileData.email || "",
+                phone: profileData.phone || "",
+                university: profileData.university || "",
+            }));
+        }
+    }, [profileData]);
     
     // Memoized handlers to prevent unnecessary re-renders
     const getInitials = useCallback(() => {
-        const firstInitial = formData.firstName.charAt(0).toUpperCase();
-        const lastInitial = formData.lastName.charAt(0).toUpperCase();
-        return `${firstInitial}${lastInitial}`;
-    }, [formData.firstName, formData.lastName]);
+        const firstInitial = (formData.firstName || profileData?.name || "").charAt(0).toUpperCase();
+        const lastInitial = (formData.lastName || profileData?.last_name || "").charAt(0).toUpperCase();
+        return `${firstInitial}${lastInitial}` || "DR";
+    }, [formData.firstName, formData.lastName, profileData]);
     
-    const handleSave = useCallback(() => {
-        console.log("Guardando cambios...", formData);
-    }, [formData]);
+    const handleChangePassword = useCallback(async () => {
+        setPasswordError("");
+        setPasswordSuccess("");
+
+        // Validations
+        if (!formData.currentPassword.trim()) {
+            setPasswordError("Ingresa tu contraseña actual.");
+            return;
+        }
+        if (!formData.newPassword.trim()) {
+            setPasswordError("Ingresa la nueva contraseña.");
+            return;
+        }
+        if (formData.newPassword.length < 6) {
+            setPasswordError("La nueva contraseña debe tener al menos 6 caracteres.");
+            return;
+        }
+        if (formData.newPassword !== formData.confirmPassword) {
+            setPasswordError("Las contraseñas no coinciden.");
+            return;
+        }
+
+        try {
+            const result = await triggerChangePassword({
+                current_password: formData.currentPassword,
+                password: formData.newPassword,
+            }).unwrap();
+
+            setPasswordSuccess(result?.message || "Contraseña actualizada correctamente.");
+            setFormData(prev => ({
+                ...prev,
+                currentPassword: "",
+                newPassword: "",
+                confirmPassword: "",
+            }));
+            setShowCurrentPassword(false);
+            setShowNewPassword(false);
+            setShowConfirmPassword(false);
+        } catch (err: any) {
+            const message = err?.data?.message || err?.message || "Error al cambiar la contraseña. Verifica tu contraseña actual.";
+            setPasswordError(message);
+        }
+    }, [formData, triggerChangePassword]);
     
     const openEditModal = useCallback((field: string, currentValue: string) => {
         setEditingField(field);
@@ -337,20 +390,35 @@ export default function ProfileScreen() {
                             </View>
                         </View>
                     </View>
+
+                    {/* Error / Success messages */}
+                    {passwordError ? (
+                        <View style={{ backgroundColor: "#fee2e2", padding: 12, borderRadius: 10, marginTop: 10 }}>
+                            <Text style={{ color: "#991b1b", fontSize: 13, fontWeight: "500" }}>{passwordError}</Text>
+                        </View>
+                    ) : null}
+                    {passwordSuccess ? (
+                        <View style={{ backgroundColor: "#dcfce7", padding: 12, borderRadius: 10, marginTop: 10 }}>
+                            <Text style={{ color: "#166534", fontSize: 13, fontWeight: "500" }}>{passwordSuccess}</Text>
+                        </View>
+                    ) : null}
+
+                    {/* Botón Cambiar Contraseña */}
+                    <Pressable 
+                        style={[
+                            styles.saveButton, 
+                            { backgroundColor: "#0284c7", marginTop: 14, opacity: isChangingPassword ? 0.7 : 1 }
+                        ]}
+                        onPress={handleChangePassword}
+                        disabled={isChangingPassword}
+                    >
+                        {isChangingPassword ? (
+                            <ActivityIndicator size="small" color="#ffffff" />
+                        ) : (
+                            <Text style={styles.saveButtonText}>Cambiar Contraseña</Text>
+                        )}
+                    </Pressable>
                 </View>
-                
-                {/* Campos requeridos indicator */}
-                <Text style={[styles.requiredNote, { color: colors.subtitle }]}>
-                    Los campos marcados con * son requeridos
-                </Text>
-                
-                {/* Botón Guardar */}
-                <Pressable 
-                    style={[styles.saveButton, { backgroundColor: "#0284c7" }]}
-                    onPress={handleSave}
-                >
-                    <Text style={styles.saveButtonText}>Guardar Cambios</Text>
-                </Pressable>
                 
                 <View style={styles.bottomSpacing} />
             </ScrollView>

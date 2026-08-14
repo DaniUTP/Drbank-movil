@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     KeyboardAvoidingView,
     Modal,
@@ -26,8 +27,18 @@ import {
     X,
 } from "lucide-react-native";
 
+import { useExamMutation } from "../../services/question/exam.rtkq";
+import { useLazyQuestionByYearQuery } from "../../services/question/question.rtkq";
+import { useExamTypeQuery } from "../../services/question/exam-type.rtkq";
+import { useYearQuery } from "../../services/question/year.rtkq";
+import { decryptLaravel } from "../../utils/encryption";
+
 export default function SimulacreGeneratorByYearScreen() {
   const { colors, darkMode, toggleDarkMode } = useTheme();
+  const [createExam] = useExamMutation();
+  const [fetchQuestionsByYear, { isLoading: isLoadingQuestions }] = useLazyQuestionByYearQuery();
+  const { data: examTypesData = [], isLoading: examTypesLoading } = useExamTypeQuery();
+  const { data: yearsData = [], isLoading: yearsLoading } = useYearQuery();
   const router = useRouter();
 
   // Form state
@@ -45,18 +56,14 @@ export default function SimulacreGeneratorByYearScreen() {
   const [yearSearch, setYearSearch] = useState("");
   const [examModeSearch, setExamModeSearch] = useState("");
 
-  // Options
-  const examTypes = [
-    { id: "1", name: "Examen Ordinario" },
-    { id: "2", name: "Examen Extraordinario" },
-    { id: "3", name: "Simulacro de Práctica" },
-    { id: "4", name: "Evaluación Diagnóstica" },
-  ];
+  // Options from APIs
+  const examTypes = useMemo(() => {
+    return examTypesData.map((item: any) => ({ id: item.exam, name: item.exam }));
+  }, [examTypesData]);
 
-  const availableYears = Array.from({ length: 15 }, (_, i) => {
-    const year = new Date().getFullYear() - i;
-    return { id: year.toString(), name: year.toString() };
-  });
+  const availableYears = useMemo(() => {
+    return yearsData.map((item: any) => ({ id: item.year, name: item.year }));
+  }, [yearsData]);
 
   const examModes = [
     {
@@ -238,11 +245,19 @@ export default function SimulacreGeneratorByYearScreen() {
                 Tipo de examen <Text style={styles.required}>*</Text>
               </Text>
               <Pressable
-                style={[styles.selector, { backgroundColor: colors.card, borderColor: colors.subtitle }]}
-                onPress={() => setShowExamTypeModal(true)}
+                style={[
+                  styles.selector,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.subtitle,
+                    opacity: examTypesLoading ? 0.7 : 1,
+                  }
+                ]}
+                onPress={() => !examTypesLoading && setShowExamTypeModal(true)}
+                disabled={examTypesLoading}
               >
                 <Text style={[styles.selectorText, examType ? { color: colors.text } : { color: colors.subtitle }]}>
-                  {examType || "Selecciona el tipo de examen"}
+                  {examTypesLoading ? "Cargando..." : (examType || "Selecciona el tipo de examen")}
                 </Text>
                 <ChevronDown size={20} color={colors.subtitle} />
               </Pressable>
@@ -254,11 +269,19 @@ export default function SimulacreGeneratorByYearScreen() {
                 Año del examen <Text style={styles.required}>*</Text>
               </Text>
               <Pressable
-                style={[styles.selector, { backgroundColor: colors.card, borderColor: colors.subtitle }]}
-                onPress={() => setShowYearModal(true)}
+                style={[
+                  styles.selector,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.subtitle,
+                    opacity: yearsLoading ? 0.7 : 1,
+                  }
+                ]}
+                onPress={() => !yearsLoading && setShowYearModal(true)}
+                disabled={yearsLoading}
               >
                 <Text style={[styles.selectorText, selectedYear ? { color: colors.text } : { color: colors.subtitle }]}>
-                  {selectedYear || "Selecciona el año"}
+                  {yearsLoading ? "Cargando..." : (selectedYear || "Selecciona el año")}
                 </Text>
                 <ChevronDown size={20} color={colors.subtitle} />
               </Pressable>
@@ -324,6 +347,15 @@ export default function SimulacreGeneratorByYearScreen() {
                   renderItem={renderExamTypeItem}
                   keyExtractor={(item) => item.id}
                   contentContainerStyle={{ paddingHorizontal: 15 }}
+                  ListEmptyComponent={() => (
+                    <View style={{ padding: 20, alignItems: "center" }}>
+                      {examTypesLoading ? (
+                        <ActivityIndicator size="small" color="#0284c7" />
+                      ) : (
+                        <Text style={{ color: colors.subtitle }}>No se encontraron tipos de examen</Text>
+                      )}
+                    </View>
+                  )}
                 />
               </View>
             </View>
@@ -363,6 +395,15 @@ export default function SimulacreGeneratorByYearScreen() {
                   renderItem={renderYearItem}
                   keyExtractor={(item) => item.id}
                   contentContainerStyle={{ paddingHorizontal: 15 }}
+                  ListEmptyComponent={() => (
+                    <View style={{ padding: 20, alignItems: "center" }}>
+                      {yearsLoading ? (
+                        <ActivityIndicator size="small" color="#0284c7" />
+                      ) : (
+                        <Text style={{ color: colors.subtitle }}>No se encontraron años disponibles</Text>
+                      )}
+                    </View>
+                  )}
                 />
               </View>
             </View>
@@ -436,22 +477,60 @@ export default function SimulacreGeneratorByYearScreen() {
               styles.createButton,
               { backgroundColor: examType && selectedYear && examMode ? "#0284c7" : "#94a3b8" }
             ]}
-            onPress={() => {
-              router.push({
-                pathname: "/questions",
-                params: {
-                  examType,
-                  specialty: "Examen por año",
-                  examMode,
-                  questionCount: "100",
-                  timeLimit: "200",
-                },
-              });
+            onPress={async () => {
+              try {
+                // 1. Fetch questions from /quiz/by-year
+                const result = await fetchQuestionsByYear({
+                  year: selectedYear,
+                  exam: examType,
+                }).unwrap();
+
+                // 2. Decrypt encrypted fields
+                const decryptedQuestions = result.map((question: any) => ({
+                  ...question,
+                  data: decryptLaravel(question.data),
+                  justification: question.justification ? decryptLaravel(question.justification) : '',
+                  distractorAnalysis: question.distractorAnalysis ? decryptLaravel(question.distractorAnalysis) : '',
+                  reference: question.reference ? decryptLaravel(question.reference) : '',
+                }));
+
+                // 3. Create exam record
+                let createdExamId = "";
+                try {
+                  const examRes = await createExam({
+                    exam_type: "by_year",
+                    title: `Examen por año - ${examType}`,
+                    description: `Año ${selectedYear}`,
+                    total_questions: decryptedQuestions.length,
+                    started_at: new Date().toISOString(),
+                  }).unwrap();
+                  createdExamId = examRes?.exam || "";
+                } catch (examErr) {
+                  console.error("Error creating exam by year:", examErr);
+                }
+
+                // 4. Navigate with fetched questions
+                router.push({
+                  pathname: "/questions",
+                  params: {
+                    examId: createdExamId,
+                    examType,
+                    years: selectedYear,
+                    examMode,
+                    sourceKey: "by_year",
+                    questionCount: decryptedQuestions.length.toString(),
+                    timeLimit: "200",
+                    questions: JSON.stringify(decryptedQuestions),
+                  },
+                });
+              } catch (error) {
+                console.error('Error fetching questions by year:', error);
+              }
             }}
-            disabled={!examType || !selectedYear || !examMode}
+            disabled={!examType || !selectedYear || !examMode || isLoadingQuestions}
           >
             <Text style={styles.createButtonText}>
-              Iniciar Examen
+              {isLoadingQuestions ? "Cargando..." : "Iniciar Examen"}
             </Text>
           </Pressable>
 

@@ -1,91 +1,52 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Modal,
-    Pressable,
-    ScrollView,
-    Text,
-    View
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../common/ThemeContext";
+import CommonModal from "../../common/Modal";
 import { styles } from "./styles";
 
+import TabNavigation from "@/common/TabNavigation";
+import { decryptLaravel } from "@/utils/encryption";
+import { parseDistractorText } from "@/utils/distractorParser";
+import { useLazyHistoryQuery } from "@/services/question/history.rtkq";
+import { useUpdateExamStatusMutation } from "@/services/question/exam.rtkq";
+import { HistoryRequestDTO } from "@/types/question/history.dto";
+import { UpdateExamStatusRequestDTO } from "@/types/question/exam.dto";
 import {
-    ArrowLeft,
-    Check,
-    ChevronLeft,
-    ChevronRight,
-    Clock,
-    Flag,
-    HelpCircle,
-    Lightbulb,
-    X
+  AlertTriangle,
+  ArrowLeft,
+  BookOpen,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Flag,
+  HelpCircle,
+  Lightbulb
 } from "lucide-react-native";
 
-// Sample questions data
-const sampleQuestions = [
-  {
-    id: "1",
-    question: "¿Cuál es la principal causa de hipertensión arterial en adultos?",
-    options: [
-      { id: "a", text: "Genética" },
-      { id: "b", text: "Dieta alta en sodio" },
-      { id: "c", text: "Sedentarismo" },
-      { id: "d", text: "Todas las anteriores" },
-    ],
-    correctAnswer: "d",
-    explanation: "La hipertensión arterial en adultos es multicausal, involucrando factores genéticos, dieta alta en sodio y sedentarismo.",
-  },
-  {
-    id: "2",
-    question: "¿Cuál es el tratamiento de primera línea para la diabetes tipo 2?",
-    options: [
-      { id: "a", text: "Insulina" },
-      { id: "b", text: "Metformina" },
-      { id: "c", text: "Sulfonilureas" },
-      { id: "d", text: "Inhibidores de DPP-4" },
-    ],
-    correctAnswer: "b",
-    explanation: "La metformina es el fármaco de elección inicial debido a su eficacia, bajo riesgo de hipoglucemia y efecto neutro en el peso.",
-  },
-  {
-    id: "3",
-    question: "¿Qué signo clínico es característico del infarto agudo de miocardio?",
-    options: [
-      { id: "a", text: "Dolor torácico opresivo" },
-      { id: "b", text: "Disnea" },
-      { id: "c", text: "Diaforesis" },
-      { id: "d", text: "Todos los anteriores" },
-    ],
-    correctAnswer: "d",
-    explanation: "El IAM se presenta típicamente con dolor torácico, dificultad para respirar (disnea) y sudoración profusa (diaforesis).",
-  },
-  {
-    id: "4",
-    question: "¿Cuál es la presión arterial normal en un adulto?",
-    options: [
-      { id: "a", text: "120/80 mmHg" },
-      { id: "b", text: "140/90 mmHg" },
-      { id: "c", text: "100/60 mmHg" },
-      { id: "d", text: "160/100 mmHg" },
-    ],
-    correctAnswer: "a",
-    explanation: "Los valores normales de presión arterial se sitúan por debajo de 120/80 mmHg en un adulto sano.",
-  },
-  {
-    id: "5",
-    question: "¿Qué antibiótico es de primera línea para neumonía adquirida en la comunidad?",
-    options: [
-      { id: "a", text: "Amoxicilina" },
-      { id: "b", text: "Ciprofloxacino" },
-      { id: "c", text: "Vancomicina" },
-      { id: "d", text: "Meropenem" },
-    ],
-    correctAnswer: "a",
-    explanation: "La amoxicilina sigue siendo el tratamiento de elección para neumonía típica adquirida en la comunidad sin factores de riesgo.",
-  },
-];
+interface QuestionOption {
+  id: string;
+  text: string;
+}
+
+interface Question {
+  id: string;
+  question: string;
+  options: QuestionOption[];
+  correctAnswer: string;
+  explanation: string;
+  distractorAnalysis?: string;
+  reference?: string;
+}
 
 export default function QuestionsScreen() {
   const { colors } = useTheme();
@@ -93,24 +54,112 @@ export default function QuestionsScreen() {
   const params = useLocalSearchParams();
 
   // Get exam configuration from params
-  const examType = params.examType as string || "Examen";
-  const specialty = params.specialty as string || "Medicina";
-  const examMode = params.examMode as string || "Resultados al final";
+  const examId = (params.examId as string) || (params.exam as string) || "";
+  const examType = (params.examType as string) || "Simulacro";
+  const area = (params.area as string) || "";
+  const specialty = (params.specialty as string) || "";
+  const theme = (params.theme as string) || "";
+  const years = (params.years as string) || "";
+  const examMode = (params.examMode as string) || "Resultados al final";
   const questionCount = parseInt(params.questionCount as string) || 5;
   const timeLimit = parseInt(params.timeLimit as string) || 30;
+  const sourceKey = (params.sourceKey as string) || (params.source as string) || "";
+
+  // Helper to map exam_type to 'simulation', 'by_year', or 'by_topic'
+  const resolveExamTypeKey = (
+    srcKey?: string,
+    typeStr?: string,
+    specStr?: string
+  ): string => {
+    if (srcKey === "simulation" || srcKey === "by_year" || srcKey === "by_topic") {
+      return srcKey;
+    }
+    const combined = `${typeStr || ""} ${specStr || ""}`.toLowerCase();
+    if (combined.includes("año") || combined.includes("year") || combined.includes("by_year")) {
+      return "by_year";
+    }
+    if (combined.includes("tema") || combined.includes("topic") || combined.includes("by_topic")) {
+      return "by_topic";
+    }
+    return "simulation";
+  };
+
+  const formattedExamType = resolveExamTypeKey(sourceKey, examType, specialty);
+
+  // Get questions from params
+  const questionsParam = params.questions as string;
+  const apiQuestions = questionsParam ? JSON.parse(questionsParam) : null;
+
+  // Transform API questions
+  const transformedQuestions = apiQuestions ? apiQuestions.map((q: any) => {
+    // 1. Obtener dato de respuesta correcta (descifrar sólo si no viene como texto plano)
+    let rawData = q.data;
+    if (typeof rawData === "string" && rawData.length > 20 && !rawData.startsWith("a") && !rawData.startsWith("b") && !rawData.startsWith("c") && !rawData.startsWith("d")) {
+      try {
+        rawData = decryptLaravel(rawData);
+      } catch (e) {
+        // En caso de fallo de descifrado, conservar rawData
+      }
+    }
+    
+    // 2. Mapear opciones (a, b, c, d)
+    const options = q.options.map((opt: any, index: number) => ({
+      id: String.fromCharCode(97 + index), 
+      originalId: opt.optionId, 
+      text: opt.option,
+    }));
+    
+    // 3. Buscar la opción correcta comparando id ('a','b'), originalId (optionId), o índice
+    const cleanData = String(rawData || '').trim().toLowerCase();
+    const correctOption = options.find((opt: any, index: number) => {
+      const optId = String(opt.id).toLowerCase();
+      const origId = String(opt.originalId || '').toLowerCase();
+      return (
+        optId === cleanData ||
+        origId === cleanData ||
+        cleanData === String(index) ||
+        cleanData === String.fromCharCode(97 + index)
+      );
+    });
+    
+    return {
+      id: q.questionId.toString(),
+      question: q.question,
+      options: options,
+      correctAnswer: correctOption ? correctOption.id : (cleanData || ''), 
+      explanation: q.justification || '',
+      distractorAnalysis: q.distractorAnalysis || '',
+      reference: q.reference || '',
+    };
+  }) : [];
+
+  // RTK Query APIs for history & exam status
+  const [triggerHistory] = useLazyHistoryQuery();
+  const [updateExamStatus] = useUpdateExamStatusMutation();
+  const startTimeRef = useRef<string>(new Date().toISOString());
 
   // State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: string]: string }>({});
   const [timeRemaining, setTimeRemaining] = useState(timeLimit * 60);
   const [isFinished, setIsFinished] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [showAbandonModal, setShowAbandonModal] = useState(false);
   
   // States for immediate response mode
   const [pendingOption, setPendingOption] = useState<string | null>(null);
   const [showImmediateConfirm, setShowImmediateConfirm] = useState(false);
   const [immediateAnswers, setImmediateAnswers] = useState<{ [key: string]: boolean }>({});
+  
+  // Tab state for feedback
+  const [activeTab, setActiveTab] = useState('fundamentacion');
+
+  const feedbackTabs = [
+    { id: 'fundamentacion', label: 'Fundamentación' },
+    { id: 'distractores', label: 'Distractores' },
+  ];
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -120,9 +169,7 @@ export default function QuestionsScreen() {
       timerRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
-            if (timerRef.current) {
-              clearInterval(timerRef.current);
-            }
+            if (timerRef.current) clearInterval(timerRef.current);
             setIsFinished(true);
             return 0;
           }
@@ -130,76 +177,51 @@ export default function QuestionsScreen() {
         });
       }, 1000);
     }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isFinished, timeRemaining]);
 
-  // Format time
   const formatTime = (seconds: number) => {
     const totalMins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    
     if (totalMins >= 60) {
       const hours = Math.floor(totalMins / 60);
       const mins = totalMins % 60;
       return `${hours}h ${mins}min`;
     }
-    
     return `${totalMins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Get time color based on remaining time
   const getTimeColor = () => {
     if (timeRemaining <= 60) return "#ef4444";
     if (timeRemaining <= 300) return "#f59e0b";
     return "#0284c7";
   };
 
-  // Get time background color
   const getTimeBackgroundColor = () => {
     if (timeRemaining <= 60) return "#fee2e2";
     if (timeRemaining <= 300) return "#fef3c7";
     return "#e0f2fe";
   };
 
-  // Get current question
-  const currentQuestion = sampleQuestions[currentQuestionIndex];
-  const totalQuestions = Math.min(questionCount, sampleQuestions.length);
+  const currentQuestion = transformedQuestions[currentQuestionIndex];
+  const totalQuestions = Math.min(questionCount, transformedQuestions.length);
 
-  // Handle answer selection
   const handleSelectAnswer = (optionId: string) => {
     if (isFinished) return;
-    
-    // If it's immediate mode, show confirmation before marking as answered
     if (examMode === "Respuesta inmediata") {
-      // If already answered, don't allow re-selection
-      if (immediateAnswers[currentQuestion.id]) return;
-      
+      if (immediateAnswers[currentQuestion.id] === true) return;
+      if (immediateAnswers[currentQuestion.id] === false && selectedAnswers[currentQuestion.id] === optionId) return;
       setPendingOption(optionId);
       setShowImmediateConfirm(true);
       return;
     }
-
-    setSelectedAnswers((prev) => ({
-      ...prev,
-      [currentQuestion.id]: optionId,
-    }));
+    setSelectedAnswers((prev) => ({ ...prev, [currentQuestion.id]: optionId }));
   };
 
   const confirmImmediateAnswer = () => {
     if (pendingOption) {
-      setSelectedAnswers((prev) => ({
-        ...prev,
-        [currentQuestion.id]: pendingOption,
-      }));
-      setImmediateAnswers((prev) => ({
-        ...prev,
-        [currentQuestion.id]: true,
-      }));
+      setSelectedAnswers((prev) => ({ ...prev, [currentQuestion.id]: pendingOption }));
+      setImmediateAnswers((prev) => ({ ...prev, [currentQuestion.id]: true }));
     }
     setShowImmediateConfirm(false);
     setPendingOption(null);
@@ -210,67 +232,177 @@ export default function QuestionsScreen() {
     setPendingOption(null);
   };
 
-  // Navigation
-  const goToNextQuestion = () => {
-    if (currentQuestionIndex < totalQuestions - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
+  const handlePressBack = () => {
+    if (isFinished) {
+      router.back();
+    } else {
+      setShowAbandonModal(true);
     }
   };
 
-  const goToPreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex((prev) => prev - 1);
-    }
-  };
-
-  // Finish exam
-  const handleFinishExam = () => {
-    setShowConfirmationModal(true);
-  };
-
-  const confirmFinishExam = () => {
+  const confirmAbandonExam = async () => {
     setIsFinished(true);
-    setShowConfirmationModal(false);
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-    
+    setIsSubmitting(true);
+    setShowAbandonModal(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+
     const results = calculateResults();
-    
-    // Replace the exam screen with results screen so user can't go back to finished exam
+    const completedAt = new Date().toISOString();
+    const timeSpent = timeLimit * 60 - timeRemaining;
+    const activeQuestions = transformedQuestions.slice(0, totalQuestions);
+
+    // 1. Build HistoryRequestDTO[]
+    const historyPayload: HistoryRequestDTO[] = activeQuestions.map((q: any) => {
+      const selectedOption = selectedAnswers[q.id];
+      const isAnswered = selectedOption !== undefined && selectedOption !== "";
+      const isCorrect = isAnswered && selectedOption === q.correctAnswer;
+      return {
+        questionId: q.id,
+        ok: isCorrect ? 1 : 0,
+        error: (isAnswered && !isCorrect) ? 1 : 0,
+        empty: !isAnswered ? 1 : 0,
+        count: 1,
+      };
+    });
+
+    // 2. Build UpdateExamStatusRequestDTO (PATCH /quiz/exam/status) with status "abandoned"
+    const updateExamPayload: UpdateExamStatusRequestDTO = {
+      exam: examId,
+      status: "abandoned",
+      score_percentage: results.percentage,
+      time_spent: timeSpent,
+      completed_at: completedAt,
+      exam_summary: activeQuestions.map((q: any) => ({
+        question_id: parseInt(q.id, 10) || 0,
+        correct_answer: q.correctAnswer || "",
+        response: selectedAnswers[q.id] || "",
+      })),
+    };
+
+    try {
+      await Promise.allSettled([
+        triggerHistory(historyPayload).unwrap(),
+        updateExamStatus(updateExamPayload).unwrap(),
+      ]);
+    } catch (error) {
+      console.error("Error submitting quiz history or updating exam status (abandoned):", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+
     router.replace({
       pathname: "/simulacre-results",
       params: {
+        examId,
         examType,
-        specialty,
+        area: area || undefined,
+        specialty: specialty || undefined,
+        theme: theme || undefined,
+        years: years || undefined,
         examMode,
+        sourceKey: formattedExamType,
         timeLimit: timeLimit.toString(),
+        questionCount: questionCount.toString(),
         correct: results.correct.toString(),
         total: results.total.toString(),
         percentage: results.percentage.toString(),
-        timeSpent: (timeLimit * 60 - timeRemaining).toString(),
+        timeSpent: timeSpent.toString(),
         selectedAnswers: JSON.stringify(selectedAnswers),
-        questions: JSON.stringify(sampleQuestions.slice(0, totalQuestions)),
+        questions: JSON.stringify(activeQuestions),
       },
     });
   };
 
-  // Calculate results
-  const calculateResults = () => {
-    let correct = 0;
-    sampleQuestions.slice(0, totalQuestions).forEach((q) => {
-      if (selectedAnswers[q.id] === q.correctAnswer) {
-        correct++;
-      }
-    });
-    return {
-      correct,
-      total: totalQuestions,
-      percentage: Math.round((correct / totalQuestions) * 100),
-    };
+  const goToNextQuestion = () => {
+    if (currentQuestionIndex < totalQuestions - 1) setCurrentQuestionIndex((prev) => prev + 1);
   };
 
-  // Render results
+  const goToPreviousQuestion = () => {
+    if (currentQuestionIndex > 0) setCurrentQuestionIndex((prev) => prev - 1);
+  };
+
+  const handleFinishExam = () => setShowConfirmationModal(true);
+
+  const confirmFinishExam = async () => {
+    setIsFinished(true);
+    setIsSubmitting(true);
+    setShowConfirmationModal(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+    const results = calculateResults();
+    const completedAt = new Date().toISOString();
+    const timeSpent = timeLimit * 60 - timeRemaining;
+    const activeQuestions = transformedQuestions.slice(0, totalQuestions);
+
+    // 1. Build HistoryRequestDTO[]
+    const historyPayload: HistoryRequestDTO[] = activeQuestions.map((q: any) => {
+      const selectedOption = selectedAnswers[q.id];
+      const isAnswered = selectedOption !== undefined && selectedOption !== "";
+      const isCorrect = isAnswered && selectedOption === q.correctAnswer;
+      return {
+        questionId: q.id,
+        ok: isCorrect ? 1 : 0,
+        error: (isAnswered && !isCorrect) ? 1 : 0,
+        empty: !isAnswered ? 1 : 0,
+        count: 1,
+      };
+    });
+
+    // 2. Build UpdateExamStatusRequestDTO (PATCH /quiz/exam/status)
+    const updateExamPayload: UpdateExamStatusRequestDTO = {
+      exam: examId,
+      status: "completed",
+      score_percentage: results.percentage,
+      time_spent: timeSpent,
+      completed_at: completedAt,
+      exam_summary: activeQuestions.map((q: any) => ({
+        question_id: parseInt(q.id, 10) || 0,
+        correct_answer: q.correctAnswer || "",
+        response: selectedAnswers[q.id] || "",
+      })),
+    };
+
+    try {
+      // Consume history query API (POST /quiz/history) & updateExamStatus mutation API (PATCH /quiz/exam/status)
+      await Promise.allSettled([
+        triggerHistory(historyPayload).unwrap(),
+        updateExamStatus(updateExamPayload).unwrap(),
+      ]);
+    } catch (error) {
+      console.error("Error submitting quiz history or update exam status API:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+
+    router.replace({
+      pathname: "/simulacre-results",
+      params: {
+        examType,
+        area: area || undefined,
+        specialty: specialty || undefined,
+        theme: theme || undefined,
+        years: years || undefined,
+        examMode,
+        sourceKey: formattedExamType,
+        timeLimit: timeLimit.toString(),
+        questionCount: questionCount.toString(),
+        correct: results.correct.toString(),
+        total: results.total.toString(),
+        percentage: results.percentage.toString(),
+        timeSpent: timeSpent.toString(),
+        selectedAnswers: JSON.stringify(selectedAnswers),
+        questions: JSON.stringify(activeQuestions),
+      },
+    });
+  };
+
+  const calculateResults = () => {
+    let correct = 0;
+    transformedQuestions.slice(0, totalQuestions).forEach((q: Question) => {
+      if (selectedAnswers[q.id] === q.correctAnswer) correct++;
+    });
+    return { correct, total: totalQuestions, percentage: Math.round((correct / totalQuestions) * 100) };
+  };
+
   const renderResults = () => {
     const results = calculateResults();
     return (
@@ -279,184 +411,195 @@ export default function QuestionsScreen() {
           <View style={styles.resultsIconContainer}>
             <Check size={48} color="#0284c7" />
           </View>
-          <Text style={[styles.resultsTitle, { color: colors.text }]}>
-            ¡Simulacro Completado!
-          </Text>
+          <Text style={[styles.resultsTitle, { color: colors.text }]}>¡Simulacro Completado!</Text>
         </View>
-
         <View style={styles.resultsStats}>
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: "#0284c7" }]}>
-              {results.correct}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.subtitle }]}>
-              Correctas
-            </Text>
+            <Text style={[styles.statValue, { color: "#0284c7" }]}>{results.correct}</Text>
+            <Text style={[styles.statLabel, { color: colors.subtitle }]}>Correctas</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: "#ef4444" }]}>
-              {results.total - results.correct}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.subtitle }]}>
-              Incorrectas
-            </Text>
+            <Text style={[styles.statValue, { color: "#ef4444" }]}>{results.total - results.correct}</Text>
+            <Text style={[styles.statLabel, { color: colors.subtitle }]}>Incorrectas</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: "#0284c7" }]}>
-              {results.percentage}%
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.subtitle }]}>
-              Puntuación
-            </Text>
+            <Text style={[styles.statValue, { color: "#0284c7" }]}>{results.percentage}%</Text>
+            <Text style={[styles.statLabel, { color: colors.subtitle }]}>Puntuación</Text>
           </View>
         </View>
-
         <View style={styles.resultsTime}>
           <Clock size={20} color={colors.subtitle} />
           <Text style={[styles.resultsTimeText, { color: colors.subtitle }]}>
             Tiempo restante: {formatTime(timeRemaining)}
           </Text>
         </View>
-
-        <Pressable
-          style={[styles.finishButton, { backgroundColor: "#0284c7" }]}
-          onPress={() => router.back()}
-        >
+        <Pressable style={[styles.finishButton, { backgroundColor: "#0284c7" }]} onPress={() => router.back()}>
           <Text style={styles.finishButtonText}>Volver al Generador</Text>
         </Pressable>
       </View>
     );
   };
 
-  // Render question
   const renderQuestion = () => {
     const selectedAnswer = selectedAnswers[currentQuestion.id];
-    const isAnswered = selectedAnswer !== undefined;
     const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
 
     return (
       <View style={styles.questionContainer}>
-        {/* Question Header */}
         <View style={styles.questionHeader}>
           <Text style={[styles.questionNumber, { color: colors.subtitle }]}>
             Pregunta {currentQuestionIndex + 1} de {totalQuestions}
           </Text>
           <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%`,
-                  backgroundColor: "#0284c7",
-                },
-              ]}
-            />
+            <View style={[styles.progressFill, { width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%`, backgroundColor: "#0284c7" }]} />
           </View>
         </View>
 
-        {/* Question Text */}
-        <Text style={[styles.questionText, { color: colors.text }]}>
-          {currentQuestion.question}
-        </Text>
+        <Text style={[styles.questionText, { color: colors.text }]}>{currentQuestion.question}</Text>
 
-        {/* Options */}
         <View style={styles.optionsContainer}>
-          {currentQuestion.options.map((option) => {
+          {currentQuestion.options.map((option: QuestionOption) => {
             const isSelected = selectedAnswer === option.id;
             const isPending = pendingOption === option.id;
-            const isCorrectOption = option.id === currentQuestion.correctAnswer;
-            
-            // Show feedback if exam is finished OR if this specific question was confirmed in immediate mode
-            const showFeedback = isFinished || (examMode === "Respuesta inmediata" && immediateAnswers[currentQuestion.id]);
+            const isCorrectOption = currentQuestion.correctAnswer && option.id === currentQuestion.correctAnswer;
+            const showFeedback = !isSubmitting && (examMode === "Respuesta inmediata" && !!immediateAnswers[currentQuestion.id]);
 
-            let optionStyle: any[] = [styles.option, { borderColor: colors.subtitle }];
+            let optionStyle: any[] = [styles.option];
             let optionTextStyle = [styles.optionText, { color: colors.text }];
 
             if (isSelected || isPending) {
-              optionStyle = [
-                styles.option,
-                { borderColor: "#0284c7", backgroundColor: "#e0f2fe" },
-              ];
+              optionStyle = [styles.option, styles.optionSelected];
             }
 
             if (showFeedback) {
               if (isCorrectOption) {
-                optionStyle = [
-                  styles.option,
-                  { borderColor: "#22c55e", backgroundColor: "#dcfce7" },
-                ];
-              } else if (isSelected && !isCorrect) {
-                optionStyle = [
-                  styles.option,
-                  { borderColor: "#ef4444", backgroundColor: "#fee2e2" },
-                ];
+                optionStyle = [styles.option, styles.optionCorrect];
+              } else if (isSelected) {
+                optionStyle = [styles.option, styles.optionIncorrect];
               }
             }
 
             return (
-              <Pressable
-                key={option.id}
-                style={optionStyle}
-                onPress={() => handleSelectAnswer(option.id)}
-                disabled={isFinished}
-              >
+              <Pressable key={option.id} style={optionStyle} onPress={() => handleSelectAnswer(option.id)} disabled={isFinished || isSubmitting}>
                 <View style={styles.optionContent}>
-                  <View
-                    style={[
-                      styles.optionLetter,
-                      (isSelected || isPending) && { backgroundColor: "#0284c7" },
-                      showFeedback && isCorrectOption && { backgroundColor: "#22c55e" },
-                      showFeedback && isSelected && !isCorrect && { backgroundColor: "#ef4444" },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.optionLetterText,
-                        { color: isSelected || (showFeedback && isCorrectOption) ? "white" : colors.text },
-                      ]}
-                    >
+                  <View style={[
+                    styles.optionLetter, 
+                    (isSelected || isPending) && styles.optionLetterSelected,
+                    showFeedback && isCorrectOption && styles.optionLetterCorrect,
+                    showFeedback && isSelected && !isCorrectOption && styles.optionLetterIncorrect
+                  ]}>
+                    <Text style={[styles.optionLetterText, { color: (isSelected || (showFeedback && (isCorrectOption || isSelected))) ? "white" : colors.text }]}>
                       {option.id.toUpperCase()}
                     </Text>
                   </View>
                   <Text style={optionTextStyle}>{option.text}</Text>
                 </View>
-                {showFeedback && isCorrectOption && (
-                  <Check size={20} color="#22c55e" />
-                )}
-                {showFeedback && isSelected && !isCorrect && (
-                  <X size={20} color="#ef4444" />
-                )}
               </Pressable>
             );
           })}
         </View>
 
-        {/* Feedback for immediate response mode */}
-        {(isFinished || (examMode === "Respuesta inmediata" && immediateAnswers[currentQuestion.id])) && (
+        {(!isSubmitting && examMode === "Respuesta inmediata" && immediateAnswers[currentQuestion.id]) && (
           <View style={styles.feedbackSection}>
-            <View
-              style={[
-                styles.feedbackContainer,
-                { backgroundColor: isCorrect ? "#dcfce7" : "#fee2e2" },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.feedbackText,
-                  { color: isCorrect ? "#166534" : "#991b1b" },
-                ]}
-              >
+            <View style={[styles.feedbackContainer, { backgroundColor: isCorrect ? "#dcfce7" : "#fee2e2" }]}>
+              <Text style={[styles.feedbackText, { color: isCorrect ? "#166534" : "#991b1b" }]}>
                 {isCorrect ? "¡Correcto!" : "Incorrecto"}
               </Text>
             </View>
 
-            {currentQuestion.explanation && (
-              <View style={styles.explanationImmediate}>
-                <View style={styles.explanationHeader}>
-                  <Lightbulb size={18} color="#0284c7" />
-                  <Text style={styles.explanationTitle}>Fundamentación</Text>
+            {/* Segmented Feedback Tabs */}
+            {feedbackTabs.filter(tab => {
+              if (tab.id === 'fundamentacion') return currentQuestion.explanation;
+              if (tab.id === 'distractores') return currentQuestion.distractorAnalysis;
+              return false;
+            }).length > 1 && (
+              <View style={styles.feedbackTabsContainer}>
+                {feedbackTabs
+                  .filter(tab => (tab.id === 'fundamentacion' ? currentQuestion.explanation : currentQuestion.distractorAnalysis))
+                  .map(tab => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <Pressable
+                        key={tab.id}
+                        style={[styles.feedbackTabItem, isActive && styles.feedbackTabItemActive]}
+                        onPress={() => setActiveTab(tab.id)}
+                      >
+                        {tab.id === 'fundamentacion' ? (
+                          <Lightbulb size={16} color={isActive ? '#0284c7' : '#64748b'} />
+                        ) : (
+                          <HelpCircle size={16} color={isActive ? '#ea580c' : '#64748b'} />
+                        )}
+                        <Text style={[styles.feedbackTabText, isActive && styles.feedbackTabTextActive]}>
+                          {tab.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+              </View>
+            )}
+
+            {activeTab === 'fundamentacion' && currentQuestion.explanation && (
+              <View>
+                <View style={styles.explanationImmediate}>
+                  <View style={styles.explanationHeader}>
+                    <View style={styles.explanationHeaderLeft}>
+                      <View style={styles.explanationIconBadge}>
+                        <Lightbulb size={18} color="#0284c7" />
+                      </View>
+                      <Text style={styles.explanationTitle}>Fundamentación</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.explanationText}>{currentQuestion.explanation}</Text>
                 </View>
-                <Text style={styles.explanationText}>{currentQuestion.explanation}</Text>
+
+                {currentQuestion.reference && (
+                  <View style={styles.referenceImmediate}>
+                    <View style={styles.referenceHeader}>
+                      <BookOpen size={15} color="#6d28d9" />
+                      <Text style={styles.referenceTitle}>Fuente Bibliográfica</Text>
+                    </View>
+                    <Text style={styles.referenceText}>{currentQuestion.reference}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {activeTab === 'distractores' && currentQuestion.distractorAnalysis && (
+              <View style={styles.distractorImmediate}>
+                <View style={styles.distractorHeader}>
+                  <View style={styles.distractorHeaderLeft}>
+                    <View style={styles.distractorIconBadge}>
+                      <HelpCircle size={18} color="#ea580c" />
+                    </View>
+                    <Text style={styles.distractorTitle}>Análisis de Distractores</Text>
+                  </View>
+                </View>
+
+                {(() => {
+                  const items = parseDistractorText(currentQuestion.distractorAnalysis);
+                  if (items.length > 0 && items.some(it => it.letter || it.label)) {
+                    return (
+                      <View style={styles.distractorList}>
+                        {items.map((item, idx) => (
+                          <View key={idx} style={styles.distractorItemCard}>
+                            <View style={styles.distractorItemHeader}>
+                              {item.letter ? (
+                                <View style={styles.distractorItemBadge}>
+                                  <Text style={styles.distractorItemBadgeText}>{item.letter}</Text>
+                                </View>
+                              ) : null}
+                              {item.label ? (
+                                <Text style={styles.distractorItemLabel}>{item.label}</Text>
+                              ) : null}
+                            </View>
+                            <Text style={styles.distractorItemBody}>{item.text}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    );
+                  }
+                  return <Text style={styles.distractorText}>{currentQuestion.distractorAnalysis}</Text>;
+                })()}
               </View>
             )}
           </View>
@@ -469,89 +612,48 @@ export default function QuestionsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={handlePressBack} style={styles.backButton}>
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-            {examType}
-          </Text>
-          <Text style={[styles.headerSubtitle, { color: colors.subtitle }]} numberOfLines={1}>
-            {specialty}
-          </Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>{examType}</Text>
         </View>
         <View style={[styles.timerContainer, { backgroundColor: getTimeBackgroundColor() }]}>
           <Clock size={18} color={getTimeColor()} />
-          <Text style={[styles.timerText, { color: getTimeColor() }]}>
-            {formatTime(timeRemaining)}
-          </Text>
+          <Text style={[styles.timerText, { color: getTimeColor() }]}>{formatTime(timeRemaining)}</Text>
         </View>
       </View>
 
-      {/* Content */}
       {showResults ? (
         renderResults()
       ) : (
-        <ScrollView
-          style={styles.container}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           {renderQuestion()}
 
-          {/* Navigation Buttons */}
           <View style={styles.navigationContainer}>
-            <Pressable
-              style={[
-                styles.navButton,
-                currentQuestionIndex === 0 && styles.navButtonDisabled,
-              ]}
-              onPress={goToPreviousQuestion}
-              disabled={currentQuestionIndex === 0}
-            >
-              <ChevronLeft size={24} color={currentQuestionIndex === 0 ? "#94a3b8" : "#0284c7"} />
-              <Text
-                style={[
-                  styles.navButtonText,
-                  { color: currentQuestionIndex === 0 ? "#94a3b8" : "#0284c7" },
-                ]}
-              >
-                Anterior
-              </Text>
+            <Pressable style={[styles.navButton, styles.navButtonSecondary, currentQuestionIndex === 0 && styles.navButtonDisabled]} onPress={goToPreviousQuestion} disabled={currentQuestionIndex === 0}>
+              <ChevronLeft size={20} color={currentQuestionIndex === 0 ? "#94a3b8" : "#0284c7"} />
+              <Text style={[styles.navButtonTextSecondary, { color: currentQuestionIndex === 0 ? "#94a3b8" : "#0284c7" }]}>Anterior</Text>
             </Pressable>
 
             {currentQuestionIndex === totalQuestions - 1 ? (
-              <Pressable
-                style={[styles.navButton, styles.finishButton]}
-                onPress={handleFinishExam}
-              >
-                <Flag size={20} color="white" />
+              <Pressable style={[styles.navButton, styles.finishButton]} onPress={handleFinishExam}>
+                <Flag size={18} color="white" />
                 <Text style={styles.finishButtonText}>Finalizar</Text>
               </Pressable>
             ) : (
-              <Pressable
-                style={[styles.navButton, styles.nextButton]}
-                onPress={goToNextQuestion}
-              >
+              <Pressable style={[styles.navButton, styles.nextButton]} onPress={goToNextQuestion}>
                 <Text style={styles.nextButtonText}>Siguiente</Text>
-                <ChevronRight size={24} color="white" />
+                <ChevronRight size={20} color="white" />
               </Pressable>
             )}
           </View>
-
-
-
-          {/* Bottom spacing */}
           <View style={styles.bottomSpacing} />
         </ScrollView>
       )}
 
-      {/* Immediate Response Confirmation Modal */}
-      <Modal
-        visible={showImmediateConfirm}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={cancelImmediateAnswer}
-      >
+      {/* Modales */}
+      <Modal visible={showImmediateConfirm} transparent animationType="fade" onRequestClose={cancelImmediateAnswer}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: "white" }]}>
             <View style={styles.modalHeader}>
@@ -561,21 +663,13 @@ export default function QuestionsScreen() {
               <View style={styles.confirmIconContainer}>
                 <HelpCircle size={48} color="#0284c7" />
               </View>
-              <Text style={styles.modalMessage}>
-                ¿Estás de acuerdo con tu selección?
-              </Text>
+              <Text style={styles.modalMessage}>¿Estás de acuerdo con tu selección?</Text>
             </View>
             <View style={styles.modalFooter}>
-              <Pressable
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={cancelImmediateAnswer}
-              >
+              <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={cancelImmediateAnswer}>
                 <Text style={styles.cancelButtonText}>No</Text>
               </Pressable>
-              <Pressable
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={confirmImmediateAnswer}
-              >
+              <Pressable style={[styles.modalButton, styles.confirmButton]} onPress={confirmImmediateAnswer}>
                 <Text style={styles.confirmButtonText}>Sí</Text>
               </Pressable>
             </View>
@@ -583,51 +677,72 @@ export default function QuestionsScreen() {
         </View>
       </Modal>
 
-      {/* Confirmation Modal */}
-      <Modal
-        visible={showConfirmationModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowConfirmationModal(false)}
-      >
+      <Modal visible={showConfirmationModal} transparent animationType="fade" onRequestClose={() => setShowConfirmationModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                Confirmar finalización
-              </Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Confirmar finalización</Text>
             </View>
-
             <View style={styles.modalBody}>
               <View style={styles.warningIconContainer}>
                 <HelpCircle size={48} color="#0284c7" />
               </View>
-              <Text style={[styles.modalMessage, { color: colors.text }]}>
-                ¿Estás seguro de que quieres finalizar el simulacro?
-              </Text>
+              <Text style={[styles.modalMessage, { color: colors.text }]}>¿Estás seguro de que quieres finalizar el simulacro?</Text>
             </View>
-
             <View style={styles.modalFooter}>
-              <Pressable
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowConfirmationModal(false)}
-              >
-                <Text style={[styles.modalButtonText, { color: "#0284c7" }]}>
-                  Continuar
-                </Text>
+              <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setShowConfirmationModal(false)}>
+                <Text style={[styles.modalButtonText, { color: "#0284c7" }]}>Continuar</Text>
               </Pressable>
-              <Pressable
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={confirmFinishExam}
-              >
-                <Text style={styles.modalButtonTextConfirm}>
-                  Sí, finalizar
-                </Text>
+              <Pressable style={[styles.modalButton, styles.confirmButton]} onPress={confirmFinishExam}>
+                <Text style={styles.modalButtonTextConfirm}>Sí, finalizar</Text>
               </Pressable>
             </View>
           </View>
         </View>
       </Modal>
+
+      {/* Modal Confirmar Abandono */}
+      <Modal visible={showAbandonModal} transparent animationType="fade" onRequestClose={() => setShowAbandonModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>¿Abandonar examen?</Text>
+            </View>
+            <View style={styles.modalBody}>
+              <View style={[styles.warningIconContainer, { backgroundColor: "#fee2e2" }]}>
+                <AlertTriangle size={36} color="#ef4444" />
+              </View>
+              <Text style={[styles.modalMessage, { color: colors.text }]}>
+                ¿Estás seguro de que deseas abandonar el simulacro? Tus respuestas actuales se guardarán y el examen quedará marcado como abandonado.
+              </Text>
+            </View>
+            <View style={styles.modalFooter}>
+              <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setShowAbandonModal(false)}>
+                <Text style={[styles.modalButtonText, { color: "#64748b" }]}>Cancelar</Text>
+              </Pressable>
+              <Pressable style={[styles.modalButton, { backgroundColor: "#ef4444" }]} onPress={confirmAbandonExam}>
+                <Text style={styles.modalButtonTextConfirm}>Sí, abandonar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal común mientras se guardan las respuestas */}
+      <CommonModal
+        visible={isSubmitting}
+        onClose={() => {}}
+        title="Guardando las respuestas"
+        showFooter={false}
+        logoSource={require("../../assets/logo_app.png")}
+        icon={<ActivityIndicator size="large" color="#0284c7" style={{ marginVertical: 6 }} />}
+      >
+        <View style={{ alignItems: "center", paddingVertical: 6 }}>
+          <Text style={{ textAlign: "center", fontSize: 15, color: colors.subtitle || "#64748b", lineHeight: 22 }}>
+            Por favor espera un momento mientras guardamos tus respuestas y procesamos los resultados del examen...
+          </Text>
+        </View>
+      </CommonModal>
     </SafeAreaView>
   );
 }
