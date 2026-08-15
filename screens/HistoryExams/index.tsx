@@ -22,7 +22,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import EmptyState from "../../common/EmptyState";
 import FilterTabs from "../../common/FilterTabs";
 import SearchBar from "../../common/SearchBar";
-import StatCard from "../../common/StatCard";
 import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
 
@@ -44,7 +43,21 @@ export interface FormattedExam {
   status?: string;
   startedAt?: string;
   examSummary?: ExamSummaryItem[];
+  recommendation?: string;
 }
+
+// ============================================
+// UTILS
+// ============================================
+const formatNumber = (num: number): string => {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'k';
+  }
+  return num.toString();
+};
 
 interface ExamGroup {
   title: string;
@@ -57,9 +70,12 @@ interface ExamGroup {
 interface ExamCardProps {
   exam: FormattedExam;
   colors: ReturnType<typeof useTheme>["colors"];
+  isPressed: boolean;
+  onPressIn: () => void;
+  onPressOut: () => void;
 }
 
-const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors }) {
+const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors, isPressed, onPressIn, onPressOut }) {
   const router = useRouter();
   const getScoreColor = (score: number) => {
     if (score >= 80) return "#22c55e";
@@ -99,13 +115,15 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors }) {
     const totalMinutes = Math.floor(seconds / 60);
     const hours = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
+    const secs = seconds % 60;
+    
     if (hours > 0) {
       return `${hours}h ${mins}m`;
     }
     if (mins > 0) {
-      return `${mins} min`;
+      return `${mins}m ${secs}s`;
     }
-    return `${seconds} seg`;
+    return `${secs}s`;
   };
 
   const scoreColor = getScoreColor(exam.score);
@@ -113,7 +131,11 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors }) {
 
   return (
     <Pressable 
-      style={[styles.examCard, { backgroundColor: colors.card }]}
+      style={[
+        styles.examCard, 
+        { backgroundColor: colors.card, borderWidth: 2, borderColor: "#e2e8f0" },
+        isPressed && { borderColor: "#0284c7", backgroundColor: "#f0f9ff" }
+      ]}
       onPress={() => router.push({
         pathname: "/history-detail",
         params: {
@@ -123,9 +145,13 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors }) {
           percentage: exam.score.toString(),
           examType: exam.type,
           specialty: exam.category,
-          timeSpent: exam.timeSpentSeconds.toString()
+          timeSpent: exam.timeSpentSeconds.toString(),
+          examSummary: JSON.stringify(exam.examSummary || []),
+          recommendation: exam.recommendation || ""
         }
       })}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
     >
       <View
         style={[
@@ -192,6 +218,7 @@ export default function HistoryExamsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [page, setPage] = useState(1);
+  const [pressedCard, setPressedCard] = useState<string | null>(null);
 
   // Prepare query payload
   const queryParams = useMemo(() => {
@@ -307,7 +334,8 @@ export default function HistoryExamsScreen() {
         timeSpentSeconds,
         status: item.status,
         startedAt: item.started_at,
-        examSummary: item.exam_summary
+        examSummary: item.exam_summary,
+        recommendation: (item as any).recommendation || ""
       };
     });
   }, [rawList]);
@@ -321,16 +349,7 @@ export default function HistoryExamsScreen() {
     );
   }, [formattedExams, searchQuery]);
 
-  // Format large numbers
-  const formatNumber = (num: number): string => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M';
-    }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'k';
-    }
-    return num.toString();
-  };
+
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -343,12 +362,15 @@ export default function HistoryExamsScreen() {
     const totalMinutes = Math.floor(totalSeconds / 60);
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
+    const seconds = totalSeconds % 60;
 
     let formattedTime: string;
     if (hours > 0) {
-      formattedTime = `${hours}h ${minutes}min`;
+      formattedTime = `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      formattedTime = `${minutes}m ${seconds}s`;
     } else {
-      formattedTime = `${minutes}min`;
+      formattedTime = `${seconds}s`;
     }
 
     return {
@@ -419,30 +441,27 @@ export default function HistoryExamsScreen() {
 
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
-          <StatCard
-            icon={FileText}
-            iconColor="#8b5cf6"
-            iconBgColor="#8b5cf620"
-            value={stats.totalExams.toString()}
-            label="Exámenes"
-            colors={colors}
-          />
-          <StatCard
-            icon={TrendingUp}
-            iconColor="#22c55e"
-            iconBgColor="#22c55e20"
-            value={`${stats.avgScore}%`}
-            label="Promedio"
-            colors={colors}
-          />
-          <StatCard
-            icon={Clock}
-            iconColor="#06b6d4"
-            iconBgColor="#06b6d420"
-            value={stats.totalTime}
-            label="Tiempo Total"
-            colors={colors}
-          />
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderLeftWidth: 4, borderLeftColor: "#7c3aed" }]}>
+            <View style={[styles.statIcon, { backgroundColor: "#7c3aed15" }]}>
+              <FileText size={20} color="#7c3aed" />
+            </View>
+            <Text style={[styles.statValue, { color: colors.text }]}>{stats.totalExams}</Text>
+            <Text style={[styles.statLabel, { color: colors.subtitle }]}>Exámenes</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderLeftWidth: 4, borderLeftColor: "#10b981" }]}>
+            <View style={[styles.statIcon, { backgroundColor: "#10b98115" }]}>
+              <TrendingUp size={20} color="#10b981" />
+            </View>
+            <Text style={[styles.statValue, { color: colors.text }]}>{stats.avgScore}%</Text>
+            <Text style={[styles.statLabel, { color: colors.subtitle }]}>Promedio</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderLeftWidth: 4, borderLeftColor: "#0891b2" }]}>
+            <View style={[styles.statIcon, { backgroundColor: "#0891b215" }]}>
+              <Clock size={20} color="#0891b2" />
+            </View>
+            <Text style={[styles.statValue, { color: colors.text }]}>{stats.totalTime}</Text>
+            <Text style={[styles.statLabel, { color: colors.subtitle }]}>Tiempo</Text>
+          </View>
         </View>
 
         {/* Filter Tabs */}
@@ -466,7 +485,14 @@ export default function HistoryExamsScreen() {
               <View key={group.title}>
                 {renderSectionHeader(group.title)}
                 {group.data.map((exam) => (
-                  <ExamCard key={exam.id} exam={exam} colors={colors} />
+                  <ExamCard 
+                    key={exam.id} 
+                    exam={exam} 
+                    colors={colors} 
+                    isPressed={pressedCard === exam.id}
+                    onPressIn={() => setPressedCard(exam.id)}
+                    onPressOut={() => setPressedCard(null)}
+                  />
                 ))}
               </View>
             ))}

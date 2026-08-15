@@ -2,7 +2,6 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
-    Pressable,
     ScrollView,
     Text,
     TextInput,
@@ -23,8 +22,6 @@ import {
     Check,
     CheckCircle2,
     ChevronDown,
-    Headphones,
-    HelpCircle,
     Mail,
     Send,
     User
@@ -52,7 +49,7 @@ export default function SupportScreen() {
     const router = useRouter();
 
     // Profile query to get current user data
-    const { data: profileData } = useProfileQuery();
+    const { data: profileData, isLoading: isProfileLoading } = useProfileQuery();
 
     // Support query trigger
     const [triggerSupport, { isLoading: isSubmitting }] = useLazySupportQuery();
@@ -180,21 +177,6 @@ export default function SupportScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Hero Banner */}
-                <View style={[styles.heroBanner, { backgroundColor: darkMode ? "#1e293b" : "#f0f9ff" }]}>
-                    <View style={styles.heroIconBox}>
-                        <Headphones size={24} color="#0284c7" />
-                    </View>
-                    <View style={styles.heroContent}>
-                        <Text style={[styles.heroTitle, { color: colors.text }]}>
-                            ¿En qué podemos ayudarte?
-                        </Text>
-                        <Text style={[styles.heroSubtitle, { color: colors.subtitle || "#64748b" }]}>
-                            Envíanos tus dudas o incidencias técnicas y las atenderemos a la brevedad.
-                        </Text>
-                    </View>
-                </View>
-
                 {/* Form Card */}
                 <View style={[styles.cardSection, { backgroundColor: colors.card }]}>
                     <Text style={[styles.sectionHeading, { color: colors.text }]}>
@@ -213,7 +195,7 @@ export default function SupportScreen() {
                             <User size={18} color={colors.subtitle || "#64748b"} />
                             <TextInput
                                 style={[styles.inputField, { color: colors.text }]}
-                                value={formData.nombreCompleto}
+                                value={isProfileLoading ? "Cargando..." : formData.nombreCompleto}
                                 editable={false}
                             />
                         </View>
@@ -231,7 +213,7 @@ export default function SupportScreen() {
                             <Mail size={18} color={colors.subtitle || "#64748b"} />
                             <TextInput
                                 style={[styles.inputField, { color: colors.text }]}
-                                value={formData.email}
+                                value={isProfileLoading ? "Cargando..." : formData.email}
                                 editable={false}
                             />
                         </View>
@@ -251,6 +233,7 @@ export default function SupportScreen() {
                                 }
                             ]}
                             onPress={() => setShowMotivoModal(true)}
+                            activeOpacity={1}
                         >
                             <Text style={[
                                 styles.selectValueText,
@@ -284,6 +267,7 @@ export default function SupportScreen() {
                                             }
                                         ]}
                                         onPress={() => updateField("prioridad", priority.value)}
+                                        activeOpacity={1}
                                     >
                                         <Text style={[
                                             styles.priorityPillText,
@@ -359,7 +343,6 @@ export default function SupportScreen() {
                 visible={showMotivoModal}
                 onClose={() => setShowMotivoModal(false)}
                 title="Motivo de Contacto"
-                icon={<HelpCircle size={32} color="#0284c7" />}
                 footerText="Cerrar"
             >
                 <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
@@ -378,6 +361,7 @@ export default function SupportScreen() {
                                     }
                                 ]}
                                 onPress={() => selectMotivo(motivo)}
+                                activeOpacity={1}
                             >
                                 <Text style={[
                                     styles.reasonOptionText,

@@ -34,13 +34,14 @@ export const styles = StyleSheet.create({
 
   dateText: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
 
   specialtyCard: {
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 25,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    backgroundColor: "#f8fafc",
   },
 
   specialtyContent: {
@@ -49,54 +50,59 @@ export const styles = StyleSheet.create({
   },
 
   specialtyIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 15,
+    width: 50,
+    height: 50,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },
 
   specialtyInfo: {
-    marginLeft: 15,
+    marginLeft: 12,
     flex: 1,
   },
 
   specialtyLabel: {
     fontSize: 12,
     marginBottom: 2,
+    fontWeight: "500",
+    color: "#64748b",
   },
 
   specialtyName: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1e293b",
   },
 
   specialtyArea: {
-    fontSize: 14,
+    fontSize: 13,
     marginTop: 2,
+    fontWeight: "400",
+    color: "#64748b",
   },
 
   progressSection: {
-    marginBottom: 25,
+    marginBottom: 20,
     alignItems: "center",
   },
 
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 20,
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 16,
     alignSelf: "flex-start",
   },
 
   circularProgressContainer: {
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 12,
   },
 
   progressStats: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 25,
+    gap: 20,
   },
 
   statItem: {
@@ -106,36 +112,40 @@ export const styles = StyleSheet.create({
   },
 
   statText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: "500",
     color: "#64748b",
   },
 
   scheduleSection: {
-    marginBottom: 25,
+    marginBottom: 20,
   },
 
   blockCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 10,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
 
   blockNumber: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.8)",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f1f5f9",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 10,
   },
 
   blockNumberText: {
-    fontWeight: "bold",
+    fontWeight: "600",
     fontSize: 14,
-    color: "#475569",
+    color: "#64748b",
   },
 
   blockContent: {
@@ -145,15 +155,15 @@ export const styles = StyleSheet.create({
   blockHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,
     flexWrap: "wrap",
   },
 
   blockTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 8,
-    color: "#334155",
+    fontSize: 12,
+    fontWeight: "500",
+    marginLeft: 6,
+    color: "#475569",
   },
 
   lockedText: {
@@ -161,58 +171,56 @@ export const styles = StyleSheet.create({
   },
 
   weaknessBadge: {
-    backgroundColor: "#fef9c3",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 8,
+    backgroundColor: "#fef3c7",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#fde047",
   },
 
   weaknessText: {
-    fontSize: 11,
-    color: "#a16207",
-    fontWeight: "600",
-    marginLeft: 4,
+    fontSize: 10,
+    color: "#92400e",
+    fontWeight: "500",
+    marginLeft: 2,
   },
 
   blockTopic: {
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 14,
+    fontWeight: "600",
     color: "#1e293b",
   },
 
   blockArea: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#64748b",
-    marginTop: 2,
+    marginTop: 1,
   },
 
   studyInfo: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 6,
-    gap: 4,
+    marginTop: 4,
+    gap: 3,
   },
 
   studyDuration: {
-    fontSize: 11,
-    color: "#ca8a04",
-    fontWeight: "500",
+    fontSize: 10,
+    color: "#d97706",
+    fontWeight: "400",
   },
 
   blockAction: {
-    marginLeft: 10,
+    marginLeft: 8,
   },
 
   startIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#6366f1",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#0284c7",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -235,5 +243,30 @@ export const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 32,
+    alignItems: "center",
+    width: "80%",
+    maxWidth: 300,
+  },
+  modalLogo: {
+    width: 80,
+    height: 80,
+    marginBottom: 16,
+  },
+  modalText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1e293b",
+    textAlign: "center",
   },
 });

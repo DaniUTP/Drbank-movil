@@ -32,18 +32,26 @@ const FilterTabs = memo<FilterTabsProps>(function FilterTabs({
           key={tab.key}
           onPress={() => onTabChange(tab.key)}
           style={{
-            backgroundColor: activeTab === tab.key ? colors.buttonBg : colors.card,
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            borderRadius: 20,
+            backgroundColor: activeTab === tab.key ? "#0284c7" : colors.card,
+            paddingHorizontal: 18,
+            paddingVertical: 10,
+            borderRadius: 22,
             marginRight: 8,
+            borderWidth: activeTab === tab.key ? 0 : 1,
+            borderColor: colors.inputBorder || "#e2e8f0",
+            shadowColor: activeTab === tab.key ? "#0284c7" : "transparent",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: activeTab === tab.key ? 0.2 : 0,
+            shadowRadius: 4,
+            elevation: activeTab === tab.key ? 3 : 0,
           }}
         >
           <Text
             style={{
-              color: activeTab === tab.key ? colors.buttonText : colors.subtitle,
-              fontSize: 14,
-              fontWeight: activeTab === tab.key ? "600" : "400",
+              color: activeTab === tab.key ? "#ffffff" : colors.subtitle,
+              fontSize: 13,
+              fontWeight: activeTab === tab.key ? "700" : "500",
+              letterSpacing: -0.2,
             }}
           >
             {tab.label}

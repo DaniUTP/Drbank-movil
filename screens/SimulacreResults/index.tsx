@@ -1,29 +1,30 @@
 import { parseDistractorText } from "@/utils/distractorParser";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-   ArrowLeft,
-   Award,
-   BookOpen,
-   CheckCircle2,
-   Clock,
-   HelpCircle,
-   Lightbulb,
-   Trophy,
-   XCircle,
-   Zap
+  ArrowLeft,
+  Award,
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  HelpCircle,
+  Lightbulb,
+  Trophy,
+  XCircle,
+  Zap
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-   Dimensions,
-   FlatList,
-   Pressable,
-   ScrollView,
-   Text,
-   View,
+  Dimensions,
+  FlatList,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import { useTheme } from "../../common/ThemeContext";
+import { decryptLaravel } from "../../utils/encryption";
 import { styles } from "./styles";
 
 const { width } = Dimensions.get("window");
@@ -79,9 +80,13 @@ function ReviewQuestionCard({ item, index, selectedAnswers }: { item: any; index
   const statusColor = isCorrect ? "#166534" : isAnswered ? "#991b1b" : "#9a3412";
   const statusLabel = isCorrect ? "Correcta" : isAnswered ? "Incorrecta" : "Sin responder";
 
+  // Decrypt explanation and distractor analysis
+  const decryptedExplanation = item.explanation ? decryptLaravel(item.explanation) : "";
+  const decryptedDistractorAnalysis = item.distractorAnalysis ? decryptLaravel(item.distractorAnalysis) : "";
+
   const tabs = [
-    ...(item.explanation ? [{ id: "fundamentacion", label: "Fundamentación" }] : []),
-    ...(item.distractorAnalysis ? [{ id: "distractores", label: "Distractores" }] : []),
+    ...(decryptedExplanation ? [{ id: "fundamentacion", label: "Fundamentación" }] : []),
+    ...(decryptedDistractorAnalysis ? [{ id: "distractores", label: "Distractores" }] : []),
   ];
 
   const currentTab = tabs.some(t => t.id === activeTab) ? activeTab : (tabs[0]?.id || "fundamentacion");
@@ -153,7 +158,7 @@ function ReviewQuestionCard({ item, index, selectedAnswers }: { item: any; index
       )}
 
       {/* Rationale Section */}
-      {currentTab === "fundamentacion" && item.explanation ? (
+      {currentTab === "fundamentacion" && decryptedExplanation ? (
         <View style={styles.explanationBox}>
            <View style={styles.explanationHeader}>
               <View style={styles.explanationHeaderLeft}>
@@ -163,7 +168,7 @@ function ReviewQuestionCard({ item, index, selectedAnswers }: { item: any; index
                 <Text style={styles.explanationTitle}>Fundamentación</Text>
               </View>
            </View>
-           <Text style={styles.explanationText}>{item.explanation}</Text>
+           <Text style={styles.explanationText}>{decryptedExplanation}</Text>
 
            {item.reference ? (
              <View style={styles.referenceBox}>
@@ -178,7 +183,7 @@ function ReviewQuestionCard({ item, index, selectedAnswers }: { item: any; index
       ) : null}
 
       {/* Distractors Section */}
-      {currentTab === "distractores" && item.distractorAnalysis ? (
+      {currentTab === "distractores" && decryptedDistractorAnalysis ? (
         <View style={styles.distractorBox}>
            <View style={styles.distractorHeader}>
               <View style={styles.distractorHeaderLeft}>
@@ -190,7 +195,7 @@ function ReviewQuestionCard({ item, index, selectedAnswers }: { item: any; index
            </View>
            
            {(() => {
-             const items = parseDistractorText(item.distractorAnalysis);
+             const items = parseDistractorText(decryptedDistractorAnalysis);
              if (items.length > 0 && items.some(it => it.letter || it.label)) {
                return (
                  <View style={styles.distractorList}>
@@ -212,7 +217,7 @@ function ReviewQuestionCard({ item, index, selectedAnswers }: { item: any; index
                  </View>
                );
              }
-             return <Text style={styles.distractorText}>{item.distractorAnalysis}</Text>;
+             return <Text style={styles.distractorText}>{decryptedDistractorAnalysis}</Text>;
            })()}
         </View>
       ) : null}
@@ -354,27 +359,6 @@ export default function SimulacreResultsScreen() {
             <Text style={styles.summaryRowLabel}>Tipo de Examen</Text>
             <Text style={styles.summaryRowValue}>{examType || "Simulacro"}</Text>
          </View>
-
-         {area ? (
-           <View style={styles.summaryRow}>
-              <Text style={styles.summaryRowLabel}>Área</Text>
-              <Text style={styles.summaryRowValue}>{area}</Text>
-           </View>
-         ) : null}
-
-         {specialty ? (
-           <View style={styles.summaryRow}>
-              <Text style={styles.summaryRowLabel}>Especialidad</Text>
-              <Text style={styles.summaryRowValue}>{specialty}</Text>
-           </View>
-         ) : null}
-
-         {theme ? (
-           <View style={styles.summaryRow}>
-              <Text style={styles.summaryRowLabel}>Tema(s)</Text>
-              <Text style={styles.summaryRowValue}>{theme}</Text>
-           </View>
-         ) : null}
 
          {years ? (
            <View style={styles.summaryRow}>

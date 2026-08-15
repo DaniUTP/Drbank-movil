@@ -83,14 +83,13 @@ export function LoginScreen() {
         token_fcm: fcmToken || '',
       }).unwrap();
 
+      await AsyncStorage.setItem('access_token', result.access_token);
+
+      // Only set token expiration if rememberMe is checked
       if (rememberMe) {
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + 7);
-        await AsyncStorage.setItem('access_token', result.access_token);
         await AsyncStorage.setItem('token_expiration', expirationDate.toISOString());
-      } else {
-        await AsyncStorage.setItem('access_token', result.access_token);
-        await AsyncStorage.removeItem('token_expiration');
       }
 
       router.replace("/dashboard");
@@ -159,26 +158,23 @@ export function LoginScreen() {
             error={errors.password}
           />
 
-          {/* Unified Clean Actions Row */}
+          {/* Forgot Password Link */}
           <View style={styles.actionsRow}>
             <Pressable
-              style={styles.rememberMeContainer}
               onPress={() => setRememberMe(!rememberMe)}
               hitSlop={6}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
             >
-              <View
-                style={[
-                  styles.checkbox,
-                  rememberMe && { backgroundColor: "#0284c7", borderColor: "#0284c7" },
-                ]}
-              >
+              <View style={[
+                styles.checkbox,
+                rememberMe && styles.checkboxChecked
+              ]}>
                 {rememberMe && <Text style={styles.checkmark}>✓</Text>}
               </View>
-              <Text style={[styles.rememberMeText, { color: colors.subtitle || "#64748b" }]}>
+              <Text style={[styles.rememberMe, { color: colors.subtitle }]}>
                 Recordarme
               </Text>
             </Pressable>
-
             <Pressable
               onPress={() => router.push('/recovery-password')}
               hitSlop={6}

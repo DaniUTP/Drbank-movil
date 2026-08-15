@@ -91,7 +91,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 20,
   },
   calendarTitleRow: {
     flexDirection: "row",
@@ -102,8 +102,64 @@ export const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
+  progressHeader: {
+    backgroundColor: "#0284c7",
+    borderRadius: 24,
+    padding: 28,
+    marginBottom: 28,
+    shadowColor: "#0284c7",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  progressTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "white",
+    marginBottom: 4,
+  },
+  progressSubtitle: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.85)",
+    marginBottom: 20,
+  },
+  progressBarContainer: {
+    height: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    borderRadius: 10,
+  },
+  progressStats: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  progressStat: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "white",
+  },
   calendarList: {
     gap: 16,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 14,
+  },
+  emptyContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 14,
   },
   dayCard: {
     flexDirection: "row",
@@ -111,34 +167,51 @@ export const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     minHeight: 72,
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  dayCardToday: {
+    borderColor: "#0284c7",
+    borderWidth: 2,
+  },
+  dayCardPressed: {
+    backgroundColor: "#e0f2fe",
+    borderColor: "#0284c7",
+    borderWidth: 2,
   },
   dayIconContainer: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },
   dayContent: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 14,
   },
   dayHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
+    marginBottom: 2,
   },
   dayText: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748b",
   },
   dayNumber: {
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#1e293b",
   },
   daySubject: {
-    fontSize: 14,
-    marginTop: 2,
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 4,
+    color: "#334155",
   },
   dayProgress: {
     fontSize: 18,
@@ -147,6 +220,7 @@ export const styles = StyleSheet.create({
   progressContainer: {
     justifyContent: "center",
     alignItems: "center",
+    marginLeft: 8,
   },
   circularProgress: {
     width: 44,

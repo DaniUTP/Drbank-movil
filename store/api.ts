@@ -18,6 +18,7 @@ export const api = createApi({
     TagTypes.QuestionByTheme,
     TagTypes.Ranking,
     TagTypes.ChangePassword,
-    TagTypes.Support
+    TagTypes.Support,
+    TagTypes.StudentProgress
   ],
 });

@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { BaseQueryFn, FetchArgs, fetchBaseQuery, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
 import { envs } from '../../config/envs';
 
-const getBaseQueryRN = fetchBaseQuery({
+const baseQuery = fetchBaseQuery({
   baseUrl: envs.API_BASE_URL,
   prepareHeaders: async (headers) => {
     // Ensure headers is not undefined
@@ -34,5 +34,43 @@ const getBaseQueryRN = fetchBaseQuery({
     return headers;
   },
 });
+
+const getBaseQueryRN: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (args, api, extraOptions) => {
+  let result = await baseQuery(args, api, extraOptions);
+
+  // Handle 401 error - try to refresh token
+  if (result.error && result.error.status === 401) {
+    try {
+      // Attempt to refresh the token using direct fetch
+      const refreshResponse = await fetch(`${envs.API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+        
+        // Store the new token
+        await AsyncStorage.setItem('access_token', refreshData.access_token);
+        
+        // Retry the original request with new token
+        result = await baseQuery(args, api, extraOptions);
+      } else {
+        // Refresh failed, clear tokens
+        await AsyncStorage.removeItem('access_token');
+        await AsyncStorage.removeItem('token_expiration');
+      }
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      // Clear tokens on error
+      await AsyncStorage.removeItem('access_token');
+      await AsyncStorage.removeItem('token_expiration');
+    }
+  }
+
+  return result;
+};
 
 export default getBaseQueryRN;

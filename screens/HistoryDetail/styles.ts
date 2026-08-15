@@ -108,6 +108,53 @@ export const styles = StyleSheet.create({
     height: 30,
     backgroundColor: "#e2e8f0",
   },
+  achievementsSection: {
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 12,
+  },
+  answersSummarySection: {
+    marginTop: 20,
+  },
+  answersGrid: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
+  },
+  answerCard: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+  },
+  answerCardLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  answerCardNumber: {
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  timeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#f8fafc",
+    padding: 12,
+    borderRadius: 12,
+  },
+  timeLabel: {
+    fontSize: 14,
+    color: "#334155",
+    fontWeight: "500",
+  },
   heroScore: {
     fontSize: 36,
     fontWeight: "800",
@@ -138,12 +185,6 @@ export const styles = StyleSheet.create({
   },
   historySection: {
     marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 12,
   },
   historyList: {
     gap: 12,
@@ -234,6 +275,44 @@ export const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 15,
   },
+  feedbackSection: {
+    marginTop: 15,
+  },
+  feedbackTabsContainer: {
+    flexDirection: "row",
+    marginTop: 4,
+    marginBottom: 12,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 12,
+    padding: 4,
+  },
+  feedbackTabItem: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  feedbackTabItemActive: {
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  feedbackTabText: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  feedbackTabTextActive: {
+    color: "#0f172a",
+    fontWeight: "700",
+  },
   optRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -264,15 +343,16 @@ export const styles = StyleSheet.create({
   explanationBox: {
     backgroundColor: "#f0f9ff",
     borderRadius: 16,
-    padding: 16,
+    padding: 6,
     borderWidth: 1,
     borderColor: "#e0f2fe",
+    marginBottom: 2,
   },
   explanationHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
+    gap: 4,
+    marginBottom: 2,
   },
   explanationTitle: {
     fontSize: 13,
@@ -282,8 +362,9 @@ export const styles = StyleSheet.create({
   explanationText: {
     fontSize: 13,
     color: "#0369a1",
-    lineHeight: 18,
+    lineHeight: 14,
     fontWeight: "500",
+    textAlign: "justify",
   },
   examenTitle: {
     fontSize: 22,
@@ -345,7 +426,6 @@ export const styles = StyleSheet.create({
     color: "#334155",
     lineHeight: 22,
     fontWeight: "500",
-    textAlign: "justify",
     flex: 1,
   },
   metricGridSmall: {

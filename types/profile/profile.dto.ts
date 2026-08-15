@@ -5,3 +5,12 @@ export interface ProfileResponseDTO{
     phone:string;
     university:string;
 }
+export interface UpdateProfileRequestDTO{
+    name:string;
+    last_name:string;
+    phone:string;
+    university:string;
+}
+export interface UpdateProfileResponseDTO{
+    message:string;
+}

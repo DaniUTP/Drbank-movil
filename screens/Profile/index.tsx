@@ -1,8 +1,9 @@
+import { useLazyChangePasswordQuery } from "@/services/profile/change-password.rtkq";
+import { useProfileQuery, useUpdateProfileMutation } from "@/services/profile/profile.rtkq";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     Modal,
     Pressable,
     ScrollView,
@@ -14,12 +15,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
-import { useProfileQuery } from "@/services/profile/profile.rtkq";
-import { useLazyChangePasswordQuery } from "@/services/profile/change-password.rtkq";
 
 import {
     ArrowLeft,
-    Camera,
     Edit2,
     Eye,
     EyeOff,
@@ -38,8 +36,18 @@ export default function ProfileScreen() {
     
     const { data: profileData, isLoading: isProfileLoading } = useProfileQuery();
     const [triggerChangePassword, { isLoading: isChangingPassword }] = useLazyChangePasswordQuery();
+    const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
     const [passwordError, setPasswordError] = useState("");
     const [passwordSuccess, setPasswordSuccess] = useState("");
+    const [profileError, setProfileError] = useState("");
+    const [profileSuccess, setProfileSuccess] = useState("");
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [originalData, setOriginalData] = useState({
+        firstName: "",
+        lastName: "",
+        phone: "",
+        university: "",
+    });
 
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
@@ -61,18 +69,38 @@ export default function ProfileScreen() {
         confirmPassword: ""
     });
 
+    const isPasswordFormValid = formData.currentPassword.trim() !== "" &&
+                                 formData.newPassword.trim() !== "" &&
+                                 formData.confirmPassword.trim() !== "";
+
     React.useEffect(() => {
         if (profileData) {
-            setFormData(prev => ({
-                ...prev,
+            const newFormData = {
                 firstName: profileData.name || "",
                 lastName: profileData.last_name || "",
                 email: profileData.email || "",
                 phone: profileData.phone || "",
                 university: profileData.university || "",
-            }));
+            };
+            setFormData(prev => ({ ...prev, ...newFormData }));
+            setOriginalData({
+                firstName: newFormData.firstName,
+                lastName: newFormData.lastName,
+                phone: newFormData.phone,
+                university: newFormData.university,
+            });
+            setHasUnsavedChanges(false);
         }
     }, [profileData]);
+
+    React.useEffect(() => {
+        const hasChanges =
+            formData.firstName !== originalData.firstName ||
+            formData.lastName !== originalData.lastName ||
+            formData.phone !== originalData.phone ||
+            formData.university !== originalData.university;
+        setHasUnsavedChanges(hasChanges);
+    }, [formData, originalData]);
     
     // Memoized handlers to prevent unnecessary re-renders
     const getInitials = useCallback(() => {
@@ -124,6 +152,41 @@ export default function ProfileScreen() {
             setPasswordError(message);
         }
     }, [formData, triggerChangePassword]);
+
+    const handleUpdateProfile = useCallback(async () => {
+        setProfileError("");
+        setProfileSuccess("");
+
+        // Validations
+        if (!formData.firstName.trim()) {
+            setProfileError("El nombre es requerido.");
+            return;
+        }
+        if (!formData.lastName.trim()) {
+            setProfileError("Los apellidos son requeridos.");
+            return;
+        }
+
+        try {
+            const result = await updateProfile({
+                name: formData.firstName,
+                last_name: formData.lastName,
+                phone: formData.phone,
+                university: formData.university,
+            }).unwrap();
+
+            setProfileSuccess(result?.message || "Perfil actualizado correctamente.");
+            setOriginalData({
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                phone: formData.phone,
+                university: formData.university,
+            });
+        } catch (err: any) {
+            const message = err?.data?.message || err?.message || "Error al actualizar el perfil.";
+            setProfileError(message);
+        }
+    }, [formData, updateProfile]);
     
     const openEditModal = useCallback((field: string, currentValue: string) => {
         setEditingField(field);
@@ -171,9 +234,6 @@ export default function ProfileScreen() {
                 <View style={styles.avatarSection}>
                     <View style={[styles.avatarContainer, { backgroundColor: "#0284c7" }]}>
                         <Text style={styles.avatarText}>{getInitials()}</Text>
-                        <Pressable style={[styles.cameraButton, { backgroundColor: colors.card }]}>
-                            <Camera size={14} color={colors.text} />
-                        </Pressable>
                     </View>
                     <Text style={[styles.userName, { color: colors.text }]}>
                         {formData.firstName} {formData.lastName}
@@ -185,9 +245,16 @@ export default function ProfileScreen() {
 
                 {/* Información Personal */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                        Información Personal
-                    </Text>
+                    <View style={styles.sectionHeader}>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                            Información Personal
+                        </Text>
+                        {hasUnsavedChanges && (
+                            <View style={styles.unsavedIndicator}>
+                                <Text style={styles.unsavedText}>Sin guardar</Text>
+                            </View>
+                        )}
+                    </View>
                     
                     <View style={[styles.card, { backgroundColor: colors.card }]}>
                         {/* Nombre */}
@@ -205,7 +272,7 @@ export default function ProfileScreen() {
                                 onPress={() => openEditModal("firstName", formData.firstName)}
                                 style={styles.editButton}
                             >
-                                <Edit2 size={18} color={editingField === "firstName" ? "#3b82f6" : "#000000"} />
+                                <Edit2 size={18} color={editingField === "firstName" ? "#3b82f6" : colors.text} />
                             </TouchableOpacity>
                         </View>
                         
@@ -226,7 +293,7 @@ export default function ProfileScreen() {
                                 onPress={() => openEditModal("lastName", formData.lastName)}
                                 style={styles.editButton}
                             >
-                                <Edit2 size={18} color={editingField === "lastName" ? "#3b82f6" : "#000000"} />
+                                <Edit2 size={18} color={editingField === "lastName" ? "#3b82f6" : colors.text} />
                             </TouchableOpacity>
                         </View>
                         
@@ -262,7 +329,7 @@ export default function ProfileScreen() {
                                 onPress={() => openEditModal("phone", formData.phone)}
                                 style={styles.editButton}
                             >
-                                <Edit2 size={18} color={editingField === "phone" ? "#3b82f6" : "#000000"} />
+                                <Edit2 size={18} color={editingField === "phone" ? "#3b82f6" : colors.text} />
                             </TouchableOpacity>
                         </View>
                         
@@ -283,12 +350,46 @@ export default function ProfileScreen() {
                                 onPress={() => openEditModal("university", formData.university)}
                                 style={styles.editButton}
                             >
-                                <Edit2 size={18} color={editingField === "university" ? "#3b82f6" : "#000000"} />
+                                <Edit2 size={18} color={editingField === "university" ? "#3b82f6" : colors.text} />
                             </TouchableOpacity>
                         </View>
+                        
+                        <View style={[styles.divider, { backgroundColor: colors.subtitle + "20" }]} />
                     </View>
                 </View>
-                
+
+                {/* Error / Success messages for profile update */}
+                {profileError ? (
+                    <View style={{ backgroundColor: "#fee2e2", padding: 12, borderRadius: 10, marginTop: 10 }}>
+                        <Text style={{ color: "#991b1b", fontSize: 13, fontWeight: "500" }}>{profileError}</Text>
+                    </View>
+                ) : null}
+                {profileSuccess ? (
+                    <View style={{ backgroundColor: "#dcfce7", padding: 12, borderRadius: 10, marginTop: 10 }}>
+                        <Text style={{ color: "#166534", fontSize: 13, fontWeight: "500" }}>{profileSuccess}</Text>
+                    </View>
+                ) : null}
+
+                {/* Botón Actualizar Perfil */}
+                <Pressable
+                    style={[
+                        styles.saveButton,
+                        {
+                            backgroundColor: hasUnsavedChanges ? "#0284c7" : "#94a3b8",
+                            marginTop: 0,
+                            opacity: isUpdatingProfile ? 0.7 : 1
+                        }
+                    ]}
+                    onPress={handleUpdateProfile}
+                    disabled={isUpdatingProfile || !hasUnsavedChanges}
+                >
+                    {isUpdatingProfile ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                        <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+                    )}
+                </Pressable>
+
                 {/* Cambiar Contraseña */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
@@ -312,7 +413,7 @@ export default function ProfileScreen() {
                                 <Text style={[styles.fieldLabel, { color: colors.subtitle }]}>Contraseña actual</Text>
                                 <Text style={[styles.required, { color: "#ef4444" }]}>*</Text>
                             </View>
-                            <View style={[styles.passwordInputContainer, { backgroundColor: colors.background }]}>
+                            <View style={[styles.passwordInputContainer, { backgroundColor: colors.background, borderColor: colors.subtitle + "30" }]}>
                                 <TextInput
                                     style={[styles.passwordInput, { color: colors.text }]}
                                     value={formData.currentPassword}
@@ -340,7 +441,7 @@ export default function ProfileScreen() {
                                 <Text style={[styles.fieldLabel, { color: colors.subtitle }]}>Nueva contraseña</Text>
                                 <Text style={[styles.required, { color: "#ef4444" }]}>*</Text>
                             </View>
-                            <View style={[styles.passwordInputContainer, { backgroundColor: colors.background }]}>
+                            <View style={[styles.passwordInputContainer, { backgroundColor: colors.background, borderColor: colors.subtitle + "30" }]}>
                                 <TextInput
                                     style={[styles.passwordInput, { color: colors.text }]}
                                     value={formData.newPassword}
@@ -368,7 +469,7 @@ export default function ProfileScreen() {
                                 <Text style={[styles.fieldLabel, { color: colors.subtitle }]}>Confirmar contraseña</Text>
                                 <Text style={[styles.required, { color: "#ef4444" }]}>*</Text>
                             </View>
-                            <View style={[styles.passwordInputContainer, { backgroundColor: colors.background }]}>
+                            <View style={[styles.passwordInputContainer, { backgroundColor: colors.background, borderColor: colors.subtitle + "30" }]}>
                                 <TextInput
                                     style={[styles.passwordInput, { color: colors.text }]}
                                     value={formData.confirmPassword}
@@ -404,13 +505,17 @@ export default function ProfileScreen() {
                     ) : null}
 
                     {/* Botón Cambiar Contraseña */}
-                    <Pressable 
+                    <Pressable
                         style={[
-                            styles.saveButton, 
-                            { backgroundColor: "#0284c7", marginTop: 14, opacity: isChangingPassword ? 0.7 : 1 }
+                            styles.saveButton,
+                            {
+                                backgroundColor: isPasswordFormValid ? "#0284c7" : "#94a3b8",
+                                marginTop: 14,
+                                opacity: isChangingPassword ? 0.7 : 1
+                            }
                         ]}
                         onPress={handleChangePassword}
-                        disabled={isChangingPassword}
+                        disabled={isChangingPassword || !isPasswordFormValid}
                     >
                         {isChangingPassword ? (
                             <ActivityIndicator size="small" color="#ffffff" />

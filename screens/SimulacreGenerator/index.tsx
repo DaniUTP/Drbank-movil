@@ -6,31 +6,31 @@ import { useYearQuery } from "@/services/question/year.rtkq";
 import Slider from "@react-native-community/slider";
 import { useRouter } from "expo-router";
 import {
-  ArrowLeft,
-  Bell,
-  Check,
-  ChevronDown,
-  Search,
-  Settings,
-  X,
+    ArrowLeft,
+    Bell,
+    Check,
+    ChevronDown,
+    Search,
+    Settings,
+    X,
 } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    FlatList,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../common/ThemeContext";
-import { useLazyQuestionQuery } from "../../services/question/question.rtkq";
 import { useExamMutation } from "../../services/question/exam.rtkq";
+import { useLazyQuestionQuery } from "../../services/question/question.rtkq";
 import { decryptLaravel } from "../../utils/encryption";
 import { styles } from "./styles";
 
@@ -47,7 +47,7 @@ export default function SimulacreGeneratorScreen() {
   const [theme, setTheme] = useState("");
   const [years, setYears] = useState("");
   const [examMode, setExamMode] = useState("");
-  const [questionCount, setQuestionCount] = useState(20);
+  const [questionCount, setQuestionCount] = useState(5);
   const [timeLimit, setTimeLimit] = useState(30);
 
   // API calls with regular hooks
@@ -774,7 +774,7 @@ export default function SimulacreGeneratorScreen() {
               </View>
               <Slider
                 style={styles.slider}
-                minimumValue={1}
+                minimumValue={5}
                 maximumValue={100}
                 step={1}
                 value={questionCount}
@@ -784,7 +784,7 @@ export default function SimulacreGeneratorScreen() {
                 thumbTintColor="#0284c7"
               />
               <View style={styles.sliderLabels}>
-                <Text style={styles.sliderLabelText}>1</Text>
+                <Text style={styles.sliderLabelText}>5</Text>
                 <Text style={styles.sliderLabelText}>100</Text>
               </View>
             </View>

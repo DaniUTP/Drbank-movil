@@ -1,6 +1,6 @@
+import { Search, X } from "lucide-react-native";
 import React, { memo } from "react";
 import { Pressable, TextInput, View } from "react-native";
-import { Search, X } from "lucide-react-native";
 import { useTheme } from "./ThemeContext";
 
 interface SearchBarProps {
@@ -24,7 +24,7 @@ const SearchBar = memo<SearchBarProps>(function SearchBar({
   };
 
   return (
-    <View style={{ backgroundColor: colors.card, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, marginHorizontal: 16, marginTop: 16 }}>
+    <View style={{ backgroundColor: colors.card, flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginHorizontal: 16, marginTop: 16, borderWidth: 1, borderColor: colors.inputBorder }}>
       <Search size={18} color={colors.subtitle} />
       <TextInput
         style={{ flex: 1, marginLeft: 8, color: colors.text, fontSize: 14 }}

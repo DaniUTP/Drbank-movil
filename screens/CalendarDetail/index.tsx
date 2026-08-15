@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   Text,
@@ -8,17 +9,19 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CircularProgress from "../../common/CircularProgress";
+import Modal from "../../common/Modal";
 import { useTheme } from "../../common/ThemeContext";
+import { useLazyQuestionByThemeQuery } from "../../services/question/question.rtkq";
+import { useStudentProgressQuery } from "../../services/studentProgress/student-progress.rtkq";
 import { styles } from "./styles";
 
 import {
-  AlertTriangle,
   ArrowLeft,
-  BookOpen,
   Brain,
   CalendarDays,
   CheckCircle,
   Clock,
+  FileText,
   Heart,
   LayoutGrid,
   Lock,
@@ -34,37 +37,83 @@ export default function CalendarDetailScreen() {
   const { colors, darkMode, toggleDarkMode } = useTheme();
   const router = useRouter();
   const { day } = useLocalSearchParams();
+  const { data: studentProgressData, isLoading: isLoadingProgress } = useStudentProgressQuery();
+  const [fetchQuestionsByTheme, { isLoading: isLoadingQuestions }] = useLazyQuestionByThemeQuery();
+  const [isLoadingBlock, setIsLoadingBlock] = useState<string | null>(null);
+  const [showLoadingModal, setShowLoadingModal] = useState(false);
 
   // Get current date
   const currentDate = new Date();
   const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-  
-  // For demo purposes, using day 15 as selected. In real app, use the day param
-  const selectedDay = day ? parseInt(day as string) : 15;
-  
-  // Calculate day of week based on selected day
-  // Day 16 = Monday, Day 22 = Sunday
-  const dayOfWeek = dayNames[((selectedDay - 16 + 1) % 7)];
-  
+
+  // Find the selected day data from API
+  const selectedDayData = useMemo(() => {
+    if (!studentProgressData?.calendar || !day) return null;
+    return studentProgressData.calendar.find((d: any) => d.date === day);
+  }, [studentProgressData, day]);
+
+  // Fallback to demo data if API data not available
+  const selectedDayNumber = day ? parseInt(day as string) : 15;
+  const dayOfWeek = selectedDayData ? selectedDayData.day_name : dayNames[((selectedDayNumber - 16 + 1) % 7)];
   const currentMonth = monthNames[currentDate.getMonth()];
   const currentYear = currentDate.getFullYear();
 
-  // Map of day to specialty data
-  const specialtyData: { [key: number]: any } = {
-    16: { name: "Cardiología", area: "Medicina Interna", icon: Heart, iconColor: "#ef4444", progress: 0, completedBlocks: 0, totalBlocks: 5 },
-    17: { name: "Pediatría", area: "Medicina Especializada", icon: Brain, iconColor: "#8b5cf6", progress: 60, completedBlocks: 3, totalBlocks: 5 },
-    18: { name: "Farmacología", area: "Ciencias Básicas", icon: Pill, iconColor: "#f97316", progress: 40, completedBlocks: 2, totalBlocks: 5 },
-    19: { name: "Neurología", area: "Medicina Interna", icon: Brain, iconColor: "#06b6d4", progress: 80, completedBlocks: 4, totalBlocks: 5 },
-    20: { name: "Cirugía", area: "Cirugía General", icon: LayoutGrid, iconColor: "#ec4899", progress: 100, completedBlocks: 5, totalBlocks: 5 },
-    21: { name: "Repaso", area: "Integración", icon: TrendingUp, iconColor: "#22c55e", progress: 20, completedBlocks: 1, totalBlocks: 5 },
-    22: { name: "Libre", area: "Descanso", icon: CalendarDays, iconColor: "#64748b", progress: 0, completedBlocks: 0, totalBlocks: 0 },
+  // Helper function to get icon based on topic
+  const getIconForTopic = (topic: string) => {
+    const lowerTopic = topic.toLowerCase();
+    if (lowerTopic.includes("cardio") || lowerTopic.includes("corazón")) return Heart;
+    if (lowerTopic.includes("pediatría") || lowerTopic.includes("niño")) return Brain;
+    if (lowerTopic.includes("farma") || lowerTopic.includes("medicamento")) return Pill;
+    if (lowerTopic.includes("neuro") || lowerTopic.includes("cerebro")) return Brain;
+    if (lowerTopic.includes("cirugía") || lowerTopic.includes("operación")) return LayoutGrid;
+    if (lowerTopic.includes("repaso")) return TrendingUp;
+    return FileText;
   };
 
-  const specialty = specialtyData[selectedDay] || { name: "General", area: "Medicina", icon: Heart, iconColor: "#64748b", progress: 0, completedBlocks: 0, totalBlocks: 5 };
+  // Helper function to get color based on topic
+  const getColorForTopic = (topic: string) => {
+    const lowerTopic = topic.toLowerCase();
+    if (lowerTopic.includes("cardio") || lowerTopic.includes("corazón")) return "#ef4444";
+    if (lowerTopic.includes("pediatría") || lowerTopic.includes("niño")) return "#8b5cf6";
+    if (lowerTopic.includes("farma") || lowerTopic.includes("medicamento")) return "#f97316";
+    if (lowerTopic.includes("neuro") || lowerTopic.includes("cerebro")) return "#06b6d4";
+    if (lowerTopic.includes("cirugía") || lowerTopic.includes("operación")) return "#ec4899";
+    if (lowerTopic.includes("repaso")) return "#22c55e";
+    return "#64748b";
+  };
+
+  // Build specialty data from API or fallback
+  const specialty = useMemo(() => {
+    if (selectedDayData) {
+      const firstTopic = selectedDayData.topics?.[0]?.theme || "General";
+      return {
+        name: firstTopic,
+        area: selectedDayData.topics?.[0]?.source || "Medicina",
+        icon: getIconForTopic(firstTopic),
+        iconColor: getColorForTopic(firstTopic),
+        progress: selectedDayData.percentage || 0,
+        completedBlocks: selectedDayData.completed_topics || 0,
+        totalBlocks: selectedDayData.total_topics || 0
+      };
+    }
+
+    // Fallback data
+    const specialtyData: { [key: number]: any } = {
+      16: { name: "Cardiología", area: "Medicina Interna", icon: Heart, iconColor: "#ef4444", progress: 0, completedBlocks: 0, totalBlocks: 5 },
+      17: { name: "Pediatría", area: "Medicina Especializada", icon: Brain, iconColor: "#8b5cf6", progress: 60, completedBlocks: 3, totalBlocks: 5 },
+      18: { name: "Farmacología", area: "Ciencias Básicas", icon: Pill, iconColor: "#f97316", progress: 40, completedBlocks: 2, totalBlocks: 5 },
+      19: { name: "Neurología", area: "Medicina Interna", icon: Brain, iconColor: "#06b6d4", progress: 80, completedBlocks: 4, totalBlocks: 5 },
+      20: { name: "Cirugía", area: "Cirugía General", icon: LayoutGrid, iconColor: "#ec4899", progress: 100, completedBlocks: 5, totalBlocks: 5 },
+      21: { name: "Repaso", area: "Integración", icon: TrendingUp, iconColor: "#22c55e", progress: 20, completedBlocks: 1, totalBlocks: 5 },
+      22: { name: "Libre", area: "Descanso", icon: CalendarDays, iconColor: "#64748b", progress: 0, completedBlocks: 0, totalBlocks: 0 },
+    };
+
+    return specialtyData[selectedDayNumber] || { name: "General", area: "Medicina", icon: Heart, iconColor: "#64748b", progress: 0, completedBlocks: 0, totalBlocks: 5 };
+  }, [selectedDayData, selectedDayNumber]);
 
   // Redirect if it's a Libre day
-  if (specialty.name === "Libre") {
+  if (specialty.name === "Libre" || (selectedDayData && selectedDayData.total_topics === 0)) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
@@ -82,65 +131,83 @@ export default function CalendarDetailScreen() {
     );
   }
 
-  // Daily schedule with study and simulacro blocks
-  const [schedule, setSchedule] = useState([
-    { 
-      id: 1, 
-      type: "study", 
-      title: "Bloque 1: Estudio", 
-      topic: "Insuficiencia Cardíaca",
-      area: "Semiología Cardiovascular",
-      duration: "20 min",
-      isWeakness: true,
-      isCompleted: false,
-      isLocked: false,
-      studyTime: 0
-    },
-    { 
-      id: 2, 
-      type: "simulacro", 
-      title: "Bloque 2: Simulacro", 
-      topic: "Evaluación Cardiovascular",
-      area: "Diagnóstico",
-      duration: "15 min",
-      isWeakness: false,
-      isCompleted: false,
-      isLocked: true
-    },
-    { 
-      id: 3, 
-      type: "study", 
-      title: "Bloque 3: Estudio", 
-      topic: "Arritmias Cardíacas",
-      area: "Electrocardiografía",
-      duration: "20 min",
-      isWeakness: false,
-      isCompleted: false,
-      isLocked: true
-    },
-    { 
-      id: 4, 
-      type: "simulacro", 
-      title: "Bloque 4: Simulacro", 
-      topic: "Casos de Arritmias",
-      area: "Diagnóstico",
-      duration: "15 min",
-      isWeakness: false,
-      isCompleted: false,
-      isLocked: true
-    },
-    { 
-      id: 5, 
-      type: "simulacro", 
-      title: "Bloque 5: Simulacro Final", 
-      topic: "Evaluación Integral",
-      area: "Repaso General",
-      duration: "30 min",
-      isWeakness: false,
-      isCompleted: false,
-      isLocked: true
+  // Daily schedule with study and simulacro blocks from API
+  const schedule = useMemo(() => {
+    if (selectedDayData?.topics && selectedDayData.topics.length > 0) {
+      return selectedDayData.topics.map((topic: any, index: number) => ({
+        id: index + 1,
+        type: topic.type === "simulacro" ? "simulacro" : "study",
+        title: topic.type === "simulacro" ? `Bloque ${index + 1}: Simulacro` : `Bloque ${index + 1}: Estudio`,
+        topic: topic.theme,
+        area: topic.source || "General",
+        duration: "20 min", // Default duration
+        isWeakness: topic.is_overdue || false,
+        isCompleted: topic.status === "completed",
+        isLocked: index > (selectedDayData.completed_topics || 0),
+        studyTime: 0
+      }));
     }
-  ]);
+
+    // Fallback schedule
+    return [
+      {
+        id: 1,
+        type: "study",
+        title: "Bloque 1: Estudio",
+        topic: "Insuficiencia Cardíaca",
+        area: "Semiología Cardiovascular",
+        duration: "20 min",
+        isWeakness: true,
+        isCompleted: false,
+        isLocked: false,
+        studyTime: 0
+      },
+      {
+        id: 2,
+        type: "simulacro",
+        title: "Bloque 2: Simulacro",
+        topic: "Evaluación Cardiovascular",
+        area: "Diagnóstico",
+        duration: "15 min",
+        isWeakness: false,
+        isCompleted: false,
+        isLocked: true
+      },
+      {
+        id: 3,
+        type: "study",
+        title: "Bloque 3: Estudio",
+        topic: "Arritmias Cardíacas",
+        area: "Electrocardiografía",
+        duration: "20 min",
+        isWeakness: false,
+        isCompleted: false,
+        isLocked: true
+      },
+      {
+        id: 4,
+        type: "simulacro",
+        title: "Bloque 4: Simulacro",
+        topic: "Casos de Arritmias",
+        area: "Diagnóstico",
+        duration: "15 min",
+        isWeakness: false,
+        isCompleted: false,
+        isLocked: true
+      },
+      {
+        id: 5,
+        type: "simulacro",
+        title: "Bloque 5: Simulacro Final",
+        topic: "Evaluación Integral",
+        area: "Repaso General",
+        duration: "30 min",
+        isWeakness: false,
+        isCompleted: false,
+        isLocked: true
+      }
+    ];
+  }, [selectedDayData]);
 
   // Use progress from specialty data (matches Dashboard)
   const progressPercentage = specialty.progress;
@@ -151,7 +218,7 @@ export default function CalendarDetailScreen() {
   const isBlockLocked = (blockIndex: number) => blockIndex > completedBlocks;
 
   // Update schedule with dynamic lock status based on completedBlocks
-  const updatedSchedule = schedule.map((block, index) => ({
+  const updatedSchedule = schedule.map((block: any, index: number) => ({
     ...block,
     isLocked: isBlockLocked(index)
   }));
@@ -167,9 +234,9 @@ export default function CalendarDetailScreen() {
 
   const getBlockIcon = (type: string) => {
     switch(type) {
-      case "study": return BookOpen;
+      case "study": return FileText;
       case "simulacro": return TrendingUp;
-      default: return BookOpen;
+      default: return FileText;
     }
   };
 
@@ -182,20 +249,53 @@ export default function CalendarDetailScreen() {
     }
   };
 
-  const handleBlockPress = (block: any) => {
+  const handleBlockPress = useCallback(async (block: any, index: number) => {
     if (block.isLocked) {
       // Show message that previous block needs to be completed
       return;
     }
-    // Navigate to the corresponding activity
-    if (block.type === "study") {
-      // Navigate to study screen
-      console.log("Navigate to study:", block.topic);
-    } else {
-      // Navigate to simulacro
-      console.log("Navigate to simulacro:", block.topic);
+    
+    // Get the theme_uuid from the selected day data
+    const topicData = selectedDayData?.topics?.[index];
+    const themeUuid = topicData?.theme_uuid;
+    
+    if (!themeUuid) {
+      console.error("No theme_uuid found for this block");
+      return;
     }
-  };
+    
+    setIsLoadingBlock(block.id.toString());
+    setShowLoadingModal(true);
+    
+    try {
+      // Call questionByTheme API
+      const result = await fetchQuestionsByTheme({ id: themeUuid }).unwrap();
+      
+      setShowLoadingModal(false);
+      
+      // Navigate to Questions screen with the fetched questions
+      router.push({
+        pathname: "/questions",
+        params: {
+          questions: JSON.stringify(result),
+          examType: "Estudio por Tema",
+          theme: block.topic,
+          area: block.area,
+          themeUuid: themeUuid,
+          sourceKey: "by_topic",
+          examMode: "Resultados al final",
+          questionCount: result.length.toString(),
+          timeLimit: "30",
+          fromCalendar: "true",
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching questions by theme:", error);
+      setShowLoadingModal(false);
+    } finally {
+      setIsLoadingBlock(null);
+    }
+  }, [selectedDayData, fetchQuestionsByTheme, router]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -225,30 +325,8 @@ export default function CalendarDetailScreen() {
         {/* Date Header */}
         <View style={styles.dateHeader}>
           <Text style={[styles.dateText, { color: colors.text }]}>
-            {dayOfWeek} {selectedDay} de {currentMonth} {currentYear}
+            {dayOfWeek} {selectedDayNumber} de {currentMonth} {currentYear}
           </Text>
-        </View>
-
-
-        {/* Specialty Card */}
-        <View style={[styles.specialtyCard, { backgroundColor: colors.card }]}>
-          <View style={styles.specialtyContent}>
-            <View style={[styles.specialtyIconContainer, { backgroundColor: specialty.iconColor + "20" }]}>
-              <specialty.icon size={32} color={specialty.iconColor} />
-            </View>
-            
-            <View style={styles.specialtyInfo}>
-              <Text style={[styles.specialtyLabel, { color: colors.subtitle }]}>
-                Especialidad Actual
-              </Text>
-              <Text style={[styles.specialtyName, { color: colors.text }]}>
-                {specialty.name}
-              </Text>
-              <Text style={[styles.specialtyArea, { color: colors.subtitle }]}>
-                {specialty.area}
-              </Text>
-            </View>
-          </View>
         </View>
 
 
@@ -270,8 +348,8 @@ export default function CalendarDetailScreen() {
 
           <View style={styles.progressStats}>
             <View style={styles.statItem}>
-              <CheckCircle size={18} color={progressPercentage >= 70 ? "#22c55e" : progressPercentage >= 40 ? "#f59e0b" : "#ef4444"} />
-              <Text style={styles.statText}>{completedBlocks} bloques</Text>
+              <CheckCircle size={18} color="#22c55e" />
+              <Text style={styles.statText}>{completedBlocks} desarrollados</Text>
             </View>
             <View style={styles.statItem}>
               <Clock size={18} color="#64748b" />
@@ -287,7 +365,7 @@ export default function CalendarDetailScreen() {
             Cronograma de Práctica
           </Text>
 
-          {updatedSchedule.map((block, index) => {
+          {updatedSchedule.map((block: any, index: number) => {
             const BlockIcon = getBlockIcon(block.type);
             return (
               <Pressable 
@@ -296,7 +374,7 @@ export default function CalendarDetailScreen() {
                   styles.blockCard,
                   { backgroundColor: getBlockColor(block.type, block.isLocked) }
                 ]}
-                onPress={() => handleBlockPress(block)}
+                onPress={() => handleBlockPress(block, index)}
                 disabled={block.isLocked}
               >
                 <View style={styles.blockNumber}>
@@ -315,26 +393,17 @@ export default function CalendarDetailScreen() {
                     <Text style={[styles.blockTitle, block.isLocked && styles.lockedText]}>
                       {block.title}
                     </Text>
-                    {block.isWeakness && !block.isLocked && (
-                      <View style={styles.weaknessBadge}>
-                        <AlertTriangle size={10} color="#ca8a04" />
-                        <Text style={styles.weaknessText}>Área Débil</Text>
-                      </View>
-                    )}
                   </View>
                   
                   <Text style={[styles.blockTopic, block.isLocked && styles.lockedText]}>
                     {block.topic}
                   </Text>
-                  <Text style={[styles.blockArea, block.isLocked && styles.lockedText]}>
-                    {block.area}
-                  </Text>
 
-                  {!block.isLocked && block.type === "study" && (
+                  {!block.isLocked && block.type === "simulacro" && (
                     <View style={styles.studyInfo}>
-                      <Clock size={14} color="#ca8a04" />
+                      <Play size={14} color="#6366f1" />
                       <Text style={styles.studyDuration}>
-                        Min: {block.duration} para desbloquear
+                        {block.duration} de duración
                       </Text>
                     </View>
                   )}
@@ -371,6 +440,17 @@ export default function CalendarDetailScreen() {
         <View style={styles.bottomSpacing} />
 
       </ScrollView>
+
+      {/* Loading Modal */}
+      <Modal
+        visible={showLoadingModal}
+        onClose={() => {}}
+        title="Generando el examen"
+        logoSource={require("../../assets/logo_app.png")}
+        showFooter={false}
+      >
+        <ActivityIndicator size="large" color="#0284c7" style={{ marginTop: 16 }} />
+      </Modal>
 
     </SafeAreaView>
   );

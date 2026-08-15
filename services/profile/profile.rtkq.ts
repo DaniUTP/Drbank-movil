@@ -1,6 +1,6 @@
 import { api } from "@/store/api";
 import { TagTypes } from "@/store/constants/tagTypes.constants";
-import { ProfileResponseDTO } from "@/types/profile/profile.dto";
+import { ProfileResponseDTO, UpdateProfileRequestDTO, UpdateProfileResponseDTO } from "@/types/profile/profile.dto";
 
 export const profileSlice = api.injectEndpoints({
   endpoints: builder => ({
@@ -11,7 +11,15 @@ export const profileSlice = api.injectEndpoints({
         url: '/auth/me',
       }),
     }),
+    updateProfile: builder.mutation<UpdateProfileResponseDTO, UpdateProfileRequestDTO>({
+      invalidatesTags:[TagTypes.Profile],
+      query: (data) => ({
+        method: 'POST',
+        url: '/profile/update',
+        body: data,
+      }),
+    }),
   }),
 });
 
-export const { useProfileQuery, useLazyProfileQuery } = profileSlice;
+export const { useProfileQuery, useLazyProfileQuery, useUpdateProfileMutation } = profileSlice;

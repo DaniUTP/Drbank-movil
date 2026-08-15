@@ -1,21 +1,20 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-    ArrowLeft,
-    Award,
-    CheckCircle2,
-    CircleDot,
-    Clock,
-    Info,
-    Lightbulb,
-    RotateCcw
+   AlertCircle,
+   ArrowLeft,
+   Award,
+   CheckCircle2,
+   CircleDot,
+   Clock,
+   Lightbulb
 } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import {
-    FlatList,
-    Pressable,
-    ScrollView,
-    Text,
-    View
+   FlatList,
+   Pressable,
+   ScrollView,
+   Text,
+   View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CircularProgressChart from "../../common/CircularProgressChart";
@@ -23,45 +22,7 @@ import TabNavigation from "../../common/TabNavigation";
 import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
 
-// Sample questions for the "Exámenes" review tab
-const sampleQuestions = [
-  {
-    id: "1",
-    question: "¿Cuál es la principal causa de hipertensión arterial en adultos?",
-    options: [
-      { id: "a", text: "Genética" },
-      { id: "b", text: "Dieta alta en sodio" },
-      { id: "c", text: "Sedentarismo" },
-      { id: "d", text: "Todas las anteriores" },
-    ],
-    correctAnswer: "d",
-    explanation: "La hipertensión arterial en adultos es multicausal, involucrando factores genéticos, dieta alta en sodio y sedentarismo.",
-  },
-  {
-    id: "2",
-    question: "¿Cuál es el tratamiento de primera línea para la diabetes tipo 2?",
-    options: [
-      { id: "a", text: "Insulina" },
-      { id: "b", text: "Metformina" },
-      { id: "c", text: "Sulfonilureas" },
-      { id: "d", text: "Inhibidores de DPP-4" },
-    ],
-    correctAnswer: "b",
-    explanation: "La metformina es el fármaco de elección inicial debido a su eficacia, bajo riesgo de hipoglucemia y efecto neutro en el peso.",
-  },
-  {
-    id: "3",
-    question: "¿Qué signo clínico es característico del infarto agudo de miocardio?",
-    options: [
-      { id: "a", text: "Dolor torácico opresivo" },
-      { id: "b", text: "Disnea" },
-      { id: "c", text: "Diaforesis" },
-      { id: "d", text: "Todos los anteriores" },
-    ],
-    correctAnswer: "d",
-    explanation: "El IAM se presenta típicamente con dolor torácico, dificultad para respirar (disnea) y sudoración profusa (diaforesis).",
-  },
-];
+
 
 export default function HistoryDetailScreen() {
   const { colors } = useTheme();
@@ -69,33 +30,38 @@ export default function HistoryDetailScreen() {
   const params = useLocalSearchParams();
 
   const [activeTab, setActiveTab] = useState<"summary" | "exams" | "analysis">("summary");
+  const [feedbackTab, setFeedbackTab] = useState('fundamentacion');
 
-  // Mock history data
-  const initialExams = useMemo(() => [
-    { 
-      id: "current", 
-      score: parseInt(params.percentage as string) || 0, 
-      date: "Hoy (Actual)", 
-      category: params.specialty as string || "Medicina", 
-      correct: parseInt(params.correct as string) || 0, 
-      total: parseInt(params.total as string) || 0,
-      time: parseInt(params.timeSpent as string) || 0,
-      type: "Simulacro"
-    },
-    { id: "h2", score: 85, date: "Ayer", category: "Pediatría", correct: 17, total: 20, time: 300, type: "Simulacro" },
-    { id: "h3", score: 70, date: "10 May", category: "Cirugía", correct: 14, total: 20, time: 450, type: "Simulacro" },
-    { id: "h4", score: 90, date: "09 May", category: "Ginecología", correct: 18, total: 20, time: 280, type: "Simulacro" },
-    { id: "h5", score: 45, date: "08 May", category: "Psiquiatría", correct: 9, total: 20, time: 600, type: "Simulacro" },
-    { id: "h6", score: 80, date: "07 May", category: "Cardiología", correct: 16, total: 20, time: 320, type: "Simulacro" },
-    { id: "h7", score: 65, date: "06 May", category: "Neurología", correct: 13, total: 20, time: 400, type: "Simulacro" },
-  ], [params]);
+  const feedbackTabs = [
+    { id: 'fundamentacion', label: 'Fundamentación' },
+    { id: 'distractores', label: 'Distractores' },
+  ];
 
-  const [selectedExamId, setSelectedExamId] = useState("current");
+  // Parse exam summary from params
+  const examSummary = useMemo(() => {
+    try {
+      const summaryStr = params.examSummary as string;
+      if (summaryStr) {
+        return JSON.parse(summaryStr);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }, [params.examSummary]);
 
-  const selectedExam = useMemo(() => 
-    initialExams.find(e => e.id === selectedExamId) || initialExams[0],
-    [selectedExamId, initialExams]
-  );
+  // Current exam data
+  const selectedExam = useMemo(() => ({
+    id: "current",
+    score: parseInt(params.percentage as string) || 0,
+    date: "Hoy (Actual)",
+    category: params.specialty as string || "Medicina",
+    correct: parseInt(params.correct as string) || 0,
+    total: parseInt(params.total as string) || 0,
+    time: parseInt(params.timeSpent as string) || 0,
+    type: params.examType as string || "Simulacro",
+    recommendation: params.recommendation as string || ""
+  }), [params]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -137,47 +103,6 @@ export default function HistoryDetailScreen() {
          </View>
       </View>
 
-      <View style={styles.historySection}>
-         <Text style={styles.sectionTitle}>Historial Reciente (Últimos 7)</Text>
-         <View style={styles.historyList}>
-            {initialExams.map((exam) => {
-               const isSelected = selectedExamId === exam.id;
-               return (
-                  <Pressable 
-                    key={exam.id} 
-                    style={[styles.historyItemCard, isSelected && styles.historyItemCardSelected]}
-                    onPress={() => setSelectedExamId(exam.id)}
-                  >
-                     <View style={[styles.historyIndicator, { backgroundColor: exam.score >= 70 ? "#22c55e" : "#ef4444" }]} />
-                     <View style={styles.historyItemInfo}>
-                        <Text style={[styles.historyItemTitle, isSelected && { color: "#0284c7" }]}>{exam.category}</Text>
-                        <Text style={styles.historyItemDate}>{exam.date} • {exam.correct}/{exam.total} aciertos</Text>
-                     </View>
-                     <View style={styles.historyItemScore}>
-                        <Text style={[styles.historyScoreText, { color: exam.score >= 70 ? "#22c55e" : "#ef4444" }]}>{exam.score}%</Text>
-                     </View>
-                  </Pressable>
-               );
-            })}
-         </View>
-      </View>
-
-      <Pressable 
-        style={styles.retryButton}
-        onPress={() => router.push({
-          pathname: "/questions",
-          params: { 
-            examType: selectedExam.type || "Simulacro", 
-            specialty: selectedExam.category, 
-            questionCount: selectedExam.total.toString(),
-            timeLimit: "30"
-          }
-        })}
-      >
-         <RotateCcw size={20} color="white" />
-         <Text style={styles.retryButtonText}>Reintentar este Simulacro</Text>
-      </Pressable>
-
       <View style={{ height: 100 }} />
     </ScrollView>
   );
@@ -185,59 +110,144 @@ export default function HistoryDetailScreen() {
   const renderExams = () => (
     <View style={styles.tabContentFlat}>
       <FlatList
-        data={sampleQuestions}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => (
-          <View style={styles.reviewCard}>
-            <View style={styles.reviewHeader}>
-               <Text style={styles.reviewIndex}>Pregunta {index + 1}</Text>
-               <View style={[styles.statusTag, { backgroundColor: item.correctAnswer === "a" ? "#fee2e2" : "#dcfce7" }]}>
-                  <Text style={[styles.statusTagText, { color: item.correctAnswer === "a" ? "#991b1b" : "#166534" }]}>
-                    {item.correctAnswer === "a" ? "Incorrecta" : "Correcta"}
-                  </Text>
-               </View>
-            </View>
-            <Text style={styles.reviewQuestion}>{item.question}</Text>
-            
-            <View style={styles.reviewOptions}>
-               {item.options.map((opt) => {
-                  const isCorrectOpt = opt.id === item.correctAnswer;
-                  const isUserSelected = opt.id === (item.id === "1" ? "a" : item.correctAnswer); 
-                  
-                  let borderColor = "#e2e8f0";
-                  let bgColor = "white";
-                  if (isCorrectOpt) { borderColor = "#22c55e"; bgColor = "#f0fdf4"; }
-                  else if (isUserSelected && !isCorrectOpt) { borderColor = "#ef4444"; bgColor = "#fef2f2"; }
+        data={examSummary}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item, index }) => {
+          const isCorrect = item.correct_answer && item.response && 
+                          item.correct_answer.toLowerCase() === item.response.toLowerCase();
+          const isUnanswered = !item.response || item.response === null;
 
-                  return (
-                    <View key={opt.id} style={[styles.optRow, { borderColor, backgroundColor: bgColor }]}>
-                       <View style={[styles.optLetter, isCorrectOpt && { backgroundColor: "#22c55e" }, isUserSelected && !isCorrectOpt && { backgroundColor: "#ef4444" }]}>
-                          <Text style={[styles.optLetterText, (isCorrectOpt || isUserSelected) && { color: "white" }]}>{opt.id.toUpperCase()}</Text>
-                       </View>
-                       <Text style={styles.optText}>{opt.text}</Text>
-                    </View>
-                  );
-               })}
-            </View>
+          // Build options from alt_a, alt_b, alt_c, alt_d fields
+          const options = [
+            { id: 'a', text: item.alt_a },
+            { id: 'b', text: item.alt_b },
+            { id: 'c', text: item.alt_c },
+            { id: 'd', text: item.alt_d },
+          ].filter(opt => opt.text); // Filter out empty options
 
-            {item.explanation && (
-              <View style={styles.explanationBox}>
-                 <View style={styles.explanationHeader}>
-                    <Info size={16} color="#0284c7" />
-                    <Text style={styles.explanationTitle}>Fundamentación</Text>
+          return (
+            <View style={styles.reviewCard}>
+              <View style={styles.reviewHeader}>
+                 <Text style={styles.reviewIndex}>Pregunta {index + 1}</Text>
+                 <View style={[styles.statusTag, { 
+                   backgroundColor: isUnanswered ? "#fef3c7" : (isCorrect ? "#dcfce7" : "#fee2e2")
+                 }]}>
+                    <Text style={[styles.statusTagText, { 
+                      color: isUnanswered ? "#92400e" : (isCorrect ? "#166534" : "#991b1b")
+                    }]}>
+                      {isUnanswered ? "Sin responder" : (isCorrect ? "Correcta" : "Incorrecta")}
+                    </Text>
                  </View>
-                 <Text style={styles.explanationText}>{item.explanation}</Text>
               </View>
-            )}
-          </View>
-        )}
+              <Text style={styles.reviewQuestion}>{item.question || "Pregunta sin texto"}</Text>
+              
+              <View style={styles.reviewOptions}>
+                 {options.map((opt, optIndex) => {
+                    const isCorrectOpt = item.correct_answer && 
+                                       item.correct_answer.toLowerCase() === opt.id.toLowerCase();
+                    const isUserSelected = item.response && 
+                                          item.response.toLowerCase() === opt.id.toLowerCase();
+                    
+                    let borderColor = "#e2e8f0";
+                    let bgColor = "white";
+                    if (isCorrectOpt) { borderColor = "#22c55e"; bgColor = "#f0fdf4"; }
+                    else if (isUserSelected && !isCorrectOpt) { borderColor = "#ef4444"; bgColor = "#fef2f2"; }
+
+                    return (
+                      <View key={opt.id} style={[styles.optRow, { borderColor, backgroundColor: bgColor }]}>
+                         <View style={[styles.optLetter, isCorrectOpt && { backgroundColor: "#22c55e" }, isUserSelected && !isCorrectOpt && { backgroundColor: "#ef4444" }]}>
+                            <Text style={[styles.optLetterText, (isCorrectOpt || isUserSelected) && { color: "white" }]}>{opt.id.toUpperCase()}</Text>
+                         </View>
+                         <Text style={styles.optText}>{opt.text}</Text>
+                      </View>
+                    );
+                 })}
+              </View>
+
+              {/* Feedback Section con Tabs */}
+              {(item.justification || item.distractor_analysis) && (
+                <View style={styles.feedbackSection}>
+                  {/* Segmented Feedback Tabs */}
+                  {feedbackTabs.filter(tab => {
+                    if (tab.id === 'fundamentacion') return item.justification;
+                    if (tab.id === 'distractores') return item.distractor_analysis;
+                    return false;
+                  }).length > 0 && (
+                    <View style={styles.feedbackTabsContainer}>
+                      {feedbackTabs
+                        .filter(tab => (tab.id === 'fundamentacion' ? item.justification : item.distractor_analysis))
+                        .map(tab => {
+                          const isActive = feedbackTab === tab.id;
+                          return (
+                            <Pressable
+                              key={tab.id}
+                              style={[styles.feedbackTabItem, isActive && styles.feedbackTabItemActive]}
+                              onPress={() => setFeedbackTab(tab.id)}
+                            >
+                              {tab.id === 'fundamentacion' ? (
+                                <Lightbulb size={16} color={isActive ? '#0284c7' : '#64748b'} />
+                              ) : (
+                                <AlertCircle size={16} color={isActive ? '#ea580c' : '#64748b'} />
+                              )}
+                              <Text style={[styles.feedbackTabText, isActive && styles.feedbackTabTextActive]}>
+                                {tab.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                    </View>
+                  )}
+
+                  {feedbackTab === 'fundamentacion' && item.justification && (
+                    <View>
+                      <View style={styles.explanationBox}>
+                         <View style={styles.explanationHeader}>
+                            <Lightbulb size={16} color="#0284c7" />
+                            <Text style={styles.explanationTitle}>Fundamentación</Text>
+                         </View>
+                         <Text style={styles.explanationText}>{item.justification}</Text>
+                      </View>
+
+                      {item.reference && (
+                        <View style={styles.explanationBox}>
+                           <View style={styles.explanationHeader}>
+                              <Lightbulb size={16} color="#7c3aed" />
+                              <Text style={styles.explanationTitle}>Referencia</Text>
+                           </View>
+                           <Text style={styles.explanationText}>{item.reference}</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {feedbackTab === 'distractores' && item.distractor_analysis && (
+                    <View style={styles.explanationBox}>
+                       <View style={styles.explanationHeader}>
+                          <AlertCircle size={16} color="#ea580c" />
+                          <Text style={styles.explanationTitle}>Análisis de Distractores</Text>
+                       </View>
+                       <Text style={styles.explanationText}>
+                         {item.distractor_analysis.replace(/\r\n\r\n\r\n/g, '\n\n').replace(/\n\n\n/g, '\n\n').replace(/\r\n\r\n/g, '\n\n')}
+                       </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          );
+        }}
         ListHeaderComponent={() => (
            <View style={{ marginBottom: 20 }}>
-              <Text style={styles.examenTitle}>Revisión del Examen</Text>
+              <Text style={styles.examenTitle}>Examen</Text>
               <Text style={styles.examenSubtitle}>Mostrando resultados para {selectedExam.category}</Text>
            </View>
         )}
         contentContainerStyle={{ padding: 20 }}
+        ListEmptyComponent={() => (
+          <View style={{ padding: 40, alignItems: "center" }}>
+            <Text style={{ color: "#64748b", fontSize: 14 }}>No hay datos del examen disponibles</Text>
+          </View>
+        )}
       />
     </View>
   );
@@ -254,34 +264,12 @@ export default function HistoryDetailScreen() {
          </View>
          
          <View style={styles.orderedRecBox}>
-            <Text style={styles.recTitleSmall}>RECOMENDACIONES:</Text>
+            <Text style={styles.recTitleSmall}>RECOMENDACIÓN:</Text>
             
             <View style={styles.bulletItem}>
                <CircleDot size={12} color="#0284c7" style={{ marginTop: 4 }} />
                <Text style={styles.bulletText}>
-                  {selectedExam.score >= 80 
-                    ? "¡Felicidades por tu excelente desempeño! Has demostrado un dominio superior en los conceptos fundamentales de esta materia." 
-                    : selectedExam.score >= 60
-                    ? "Has logrado un puntaje sólido, pero existen áreas de oportunidad. Dominas la teoría básica, pero fallas en la aplicación práctica."
-                    : "Tu desempeño actual requiere una intervención inmediata. Es vital que detengas los simulacros y regreses a las bases teóricas."}
-               </Text>
-            </View>
-
-            <View style={styles.bulletItem}>
-               <CircleDot size={12} color="#0284c7" style={{ marginTop: 4 }} />
-               <Text style={styles.bulletText}>
-                  {selectedExam.score >= 80 
-                    ? "Te sugerimos enfocarte en la resolución de casos clínicos de alta complejidad para perfeccionar tu técnica de descarte." 
-                    : selectedExam.score >= 60
-                    ? "Te sugerimos priorizar el estudio de los subtemas donde hubo errores y practicar con énfasis en la lectura comprensiva."
-                    : "Enfócate en comprender la fisiopatología y los pilares del diagnóstico antes de intentar nuevos ejercicios prácticos."}
-               </Text>
-            </View>
-
-            <View style={styles.bulletItem}>
-               <CircleDot size={12} color="#0284c7" style={{ marginTop: 4 }} />
-               <Text style={styles.bulletText}>
-                  Mantén la constancia en tus repasos espaciados y revisa periódicamente las actualizaciones de las guías internacionales.
+                  {selectedExam.recommendation || "No hay recomendación disponible"}
                </Text>
             </View>
          </View>
@@ -307,7 +295,7 @@ export default function HistoryDetailScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.replace("/dashboard")} style={styles.backBtn}>
+        <Pressable onPress={() => router.replace("/history-exam")} style={styles.backBtn}>
           <ArrowLeft size={24} color="#1e293b" />
         </Pressable>
         <Text style={styles.headerTitle}>Detalle Histórico</Text>
@@ -318,8 +306,8 @@ export default function HistoryDetailScreen() {
       <TabNavigation
         tabs={[
           { id: "summary", label: "Resumen" },
-          { id: "exams", label: "Exámenes" },
-          { id: "analysis", label: "Análisis" }
+          { id: "exams", label: "Examen" },
+          { id: "analysis", label: "Recomendación" }
         ]}
         activeTab={activeTab}
         onTabChange={(id: string) => setActiveTab(id as any)}

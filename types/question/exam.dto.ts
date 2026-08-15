@@ -16,18 +16,18 @@ export interface GetExamRequestDTO {
     exam_type?: string;
 }
 
-export interface ExamSummaryItem{
-    question_id:number;
-    correct_answer:string;
-    response:string;
-    question:string;
-    alt_a:string;
-    alt_b:string;
-    alt_c:string;
-    alt_d:string;
-    justification:string;
-    reference:string;
-    distractor_analysis:string;
+export interface ExamSummaryItem {
+    question_id: number;
+    correct_answer: string;
+    response: string;
+    question: string;
+    alt_a: string;
+    alt_b: string;
+    alt_c: string;
+    alt_d: string;
+    justification: string;
+    reference: string;
+    distractor_analysis: string;
 }
 export interface ExamHistoryItemDTO {
     uuid: string;
@@ -51,19 +51,26 @@ export interface GetExamResponseDTO {
 }
 
 export interface UpdateExamStatusRequestDTO {
-  exam: string;
-  status: string;
-  score_percentage: number;
-  time_spent: number;
-  exam_summary: ExamSummaryDTO[];
-  completed_at: string;
+    exam: string;
+    status: string;
+    score_percentage: number;
+    time_spent: number;
+    exam_summary: ExamSummaryDTO[];
+    completed_at: string;
 }
 
 export interface ExamSummaryDTO {
-  question_id: number;
-  correct_answer: string;
-  response: string;
+    question_id: number;
+    correct_answer: string;
+    response: string;
 }
 export interface UpdateExamStatusResponseDTO {
-    message:string;
+    message: string;
+}
+
+export interface DownloadExamsRequestDTO {
+    exams: string[];
+}
+export interface DownloadExamsResponseDTO {
+    message: string;
 }

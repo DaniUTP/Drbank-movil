@@ -10,5 +10,6 @@ export const enum TagTypes {
   QuestionByTheme='QuestionByTheme',
   Ranking='Ranking',
   ChangePassword='ChangePassword',
-  Support='Support'
+  Support='Support',
+  StudentProgress='StudentProgress'
 }

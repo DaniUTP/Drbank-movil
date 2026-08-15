@@ -1,5 +1,5 @@
 import { api } from "@/store/api";
-import { ExamRequestDTO, ExamResponseDTO, GetExamRequestDTO, GetExamResponseDTO, UpdateExamStatusRequestDTO, UpdateExamStatusResponseDTO } from "@/types/question/exam.dto";
+import { DownloadExamsRequestDTO, DownloadExamsResponseDTO, ExamRequestDTO, ExamResponseDTO, GetExamRequestDTO, GetExamResponseDTO, UpdateExamStatusRequestDTO, UpdateExamStatusResponseDTO } from "@/types/question/exam.dto";
 
 export const examSlice = api.injectEndpoints({
     endpoints: (builder) => ({
@@ -24,6 +24,13 @@ export const examSlice = api.injectEndpoints({
                 body
             }),
         }),
+        downloadExams:builder.mutation<DownloadExamsResponseDTO, DownloadExamsRequestDTO>({
+            query: (body) => ({
+                url: '/quiz/exam/download-summary',
+                method: 'POST',
+                body
+            }),
+        }),
     })
 })
 
@@ -32,5 +39,6 @@ export const {
     useGetExamQuery,
     useLazyGetExamQuery,
     useUpdateExamStatusMutation,
+    useDownloadExamsMutation,
 } = examSlice;
 

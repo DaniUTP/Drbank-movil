@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { Moon, Sun } from "lucide-react-native";
+import { LogOut, Moon, Sun } from "lucide-react-native";
 import { memo, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useProfileQuery } from "../services/profile/profile.rtkq";
@@ -8,12 +8,14 @@ import { useTheme } from "./ThemeContext";
 interface DashboardHeaderProps {
   title?: string;
   subtitle?: string;
+  onLogout?: () => void;
 }
 
 // Memoized to prevent unnecessary re-renders
 const DashboardHeaderComponent = memo(function DashboardHeader({ 
   title, 
-  subtitle 
+  subtitle,
+  onLogout
 }: DashboardHeaderProps) {
   const { colors, darkMode, toggleDarkMode } = useTheme();
   const { data: profileData, isLoading } = useProfileQuery();
@@ -73,13 +75,21 @@ const DashboardHeaderComponent = memo(function DashboardHeader({
         </View>
       </View>
 
-      <Pressable onPress={toggleDarkMode} style={notificationStyle}>
-        {darkMode ? (
-          <Sun size={22} color={colors.text} />
-        ) : (
-          <Moon size={22} color={colors.text} />
+      <View style={styles.headerRight}>
+        <Pressable onPress={toggleDarkMode} style={notificationStyle}>
+          {darkMode ? (
+            <Sun size={22} color={colors.text} />
+          ) : (
+            <Moon size={22} color={colors.text} />
+          )}
+        </Pressable>
+        
+        {onLogout && (
+          <Pressable onPress={onLogout} style={notificationStyle}>
+            <LogOut size={22} color="#ef4444" />
+          </Pressable>
         )}
-      </Pressable>
+      </View>
     </View>
   );
 });
@@ -99,6 +109,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10
+  },
+
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
   },
 
   avatar: {

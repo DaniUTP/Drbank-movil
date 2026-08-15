@@ -64,8 +64,8 @@ export const styles = StyleSheet.create({
     sectionHeader: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
         marginBottom: 12,
+        gap: 8,
     },
     sectionIcon: {
         width: 44,
@@ -77,6 +77,18 @@ export const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: "bold",
+        flex: 1,
+    },
+    unsavedIndicator: {
+        backgroundColor: "#fef3c7",
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    unsavedText: {
+        color: "#92400e",
+        fontSize: 12,
+        fontWeight: "600",
     },
     sectionSubtitle: {
         fontSize: 13,
@@ -137,6 +149,8 @@ export const styles = StyleSheet.create({
         alignItems: "center",
         borderRadius: 12,
         paddingHorizontal: 14,
+        borderWidth: 1,
+        borderColor: "#e2e8f0",
     },
     passwordInput: {
         flex: 1,

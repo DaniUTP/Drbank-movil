@@ -1,36 +1,36 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  View
+    ActivityIndicator,
+    Modal,
+    Pressable,
+    ScrollView,
+    Text,
+    View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "../../common/ThemeContext";
 import CommonModal from "../../common/Modal";
+import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
 
-import TabNavigation from "@/common/TabNavigation";
-import { decryptLaravel } from "@/utils/encryption";
-import { parseDistractorText } from "@/utils/distractorParser";
-import { useLazyHistoryQuery } from "@/services/question/history.rtkq";
 import { useUpdateExamStatusMutation } from "@/services/question/exam.rtkq";
-import { HistoryRequestDTO } from "@/types/question/history.dto";
+import { useLazyHistoryQuery } from "@/services/question/history.rtkq";
+import { useMarkStudiedMutation } from "@/services/studentProgress/student-progress.rtkq";
 import { UpdateExamStatusRequestDTO } from "@/types/question/exam.dto";
+import { HistoryRequestDTO } from "@/types/question/history.dto";
+import { parseDistractorText } from "@/utils/distractorParser";
+import { decryptLaravel } from "@/utils/encryption";
 import {
-  AlertTriangle,
-  ArrowLeft,
-  BookOpen,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Flag,
-  HelpCircle,
-  Lightbulb
+    AlertTriangle,
+    ArrowLeft,
+    BookOpen,
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    Flag,
+    HelpCircle,
+    Lightbulb
 } from "lucide-react-native";
 
 interface QuestionOption {
@@ -64,6 +64,8 @@ export default function QuestionsScreen() {
   const questionCount = parseInt(params.questionCount as string) || 5;
   const timeLimit = parseInt(params.timeLimit as string) || 30;
   const sourceKey = (params.sourceKey as string) || (params.source as string) || "";
+  const themeUuid = (params.themeUuid as string) || "";
+  const fromCalendar = (params.fromCalendar as string) === "true";
 
   // Helper to map exam_type to 'simulation', 'by_year', or 'by_topic'
   const resolveExamTypeKey = (
@@ -102,12 +104,14 @@ export default function QuestionsScreen() {
       }
     }
     
-    // 2. Mapear opciones (a, b, c, d)
-    const options = q.options.map((opt: any, index: number) => ({
-      id: String.fromCharCode(97 + index), 
-      originalId: opt.optionId, 
-      text: opt.option,
-    }));
+    // 2. Mapear opciones (a, b, c, d) - filtrar opciones vacías
+    const options = q.options
+      .filter((opt: any) => opt.option && opt.option.trim() !== '')
+      .map((opt: any, index: number) => ({
+        id: String.fromCharCode(97 + index),
+        originalId: opt.optionId,
+        text: opt.option,
+      }));
     
     // 3. Buscar la opción correcta comparando id ('a','b'), originalId (optionId), o índice
     const cleanData = String(rawData || '').trim().toLowerCase();
@@ -136,6 +140,7 @@ export default function QuestionsScreen() {
   // RTK Query APIs for history & exam status
   const [triggerHistory] = useLazyHistoryQuery();
   const [updateExamStatus] = useUpdateExamStatusMutation();
+  const [markStudied] = useMarkStudiedMutation();
   const startTimeRef = useRef<string>(new Date().toISOString());
 
   // State
@@ -162,23 +167,6 @@ export default function QuestionsScreen() {
   ];
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Timer effect
-  useEffect(() => {
-    if (!isFinished && timeRemaining > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            if (timerRef.current) clearInterval(timerRef.current);
-            setIsFinished(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [isFinished, timeRemaining]);
 
   const formatTime = (seconds: number) => {
     const totalMins = Math.floor(seconds / 60);
@@ -323,7 +311,7 @@ export default function QuestionsScreen() {
 
   const handleFinishExam = () => setShowConfirmationModal(true);
 
-  const confirmFinishExam = async () => {
+  const confirmFinishExam = useCallback(async () => {
     setIsFinished(true);
     setIsSubmitting(true);
     setShowConfirmationModal(false);
@@ -367,6 +355,16 @@ export default function QuestionsScreen() {
         triggerHistory(historyPayload).unwrap(),
         updateExamStatus(updateExamPayload).unwrap(),
       ]);
+      
+      // Call markStudied API only if exam comes from calendar (fromCalendar === true)
+      if (fromCalendar && themeUuid) {
+        try {
+          await markStudied({ theme_uuid: themeUuid }).unwrap();
+        } catch (error) {
+          console.error("Error marking topic as studied:", error);
+          // Don't block navigation if markStudied fails
+        }
+      }
     } catch (error) {
       console.error("Error submitting quiz history or update exam status API:", error);
     } finally {
@@ -393,7 +391,26 @@ export default function QuestionsScreen() {
         questions: JSON.stringify(activeQuestions),
       },
     });
-  };
+  }, [selectedAnswers, transformedQuestions, totalQuestions, timeLimit, timeRemaining, examId, triggerHistory, updateExamStatus, markStudied, themeUuid, fromCalendar, formattedExamType, examType, area, specialty, theme, years, examMode, questionCount, router]);
+
+  // Timer effect
+  useEffect(() => {
+    if (!isFinished && timeRemaining > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            setIsFinished(true);
+            // Auto-finish exam when time runs out
+            setTimeout(() => confirmFinishExam(), 100);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [isFinished, timeRemaining, confirmFinishExam]);
 
   const calculateResults = () => {
     let correct = 0;

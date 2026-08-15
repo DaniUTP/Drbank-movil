@@ -1,12 +1,12 @@
 import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  Keyboard,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    Keyboard,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import InputField from "../../common/InputField";
@@ -284,7 +284,7 @@ function RegisterScreen() {
           disabled={isLoading}
         >
           {isLoading ? (
-            <Text style={buttonTextStyle}>Cargando...</Text>
+            <Text style={buttonTextStyle}>Registrando...</Text>
           ) : (
             <Text style={buttonTextStyle}>Registrar</Text>
           )}

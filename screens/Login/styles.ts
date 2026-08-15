@@ -62,13 +62,17 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  checkboxChecked: {
+    backgroundColor: "#0284c7",
+    borderColor: "#0284c7",
+  },
   checkmark: {
     fontSize: 10,
     fontWeight: "700",
     color: "#ffffff",
     marginTop: -1,
   },
-  rememberMeText: {
+  rememberMe: {
     fontSize: 12,
     fontWeight: "500",
   },

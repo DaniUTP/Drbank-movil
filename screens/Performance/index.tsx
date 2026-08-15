@@ -13,10 +13,10 @@ import Modal from "../../common/Modal";
 import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
 
-import { useRankingQuery } from "@/services/question/ranking.rtkq";
-import { useGetHistoryQuery } from "@/services/question/history.rtkq";
 import { useProfileQuery } from "@/services/profile/profile.rtkq";
-import { GetHistoryItemDTO, GetHistoryResponseDTO } from "@/types/question/history.dto";
+import { useGetHistoryQuery } from "@/services/question/history.rtkq";
+import { useRankingQuery } from "@/services/question/ranking.rtkq";
+import { GetHistoryItemDTO } from "@/types/question/history.dto";
 import { RankingResponseDTO } from "@/types/question/ranking.dto";
 
 import {
@@ -37,7 +37,7 @@ export default function MetricScreen() {
     const router = useRouter();
 
     // Tab state: 'area' | 'specialty' | 'theme'
-    const [activeCategoryTab, setActiveCategoryTab] = useState<'area' | 'specialty' | 'theme'>('specialty');
+    const [activeCategoryTab, setActiveCategoryTab] = useState<'area' | 'specialty' | 'theme'>('area');
     const [page, setPage] = useState(1);
 
     // Modal state
@@ -148,11 +148,6 @@ export default function MetricScreen() {
                             </View>
                             <Text style={[styles.rankingCardTitle, { color: colors.text }]}>
                                 Top 10 Ranking Nacional
-                            </Text>
-                        </View>
-                        <View style={styles.rankingTotalPill}>
-                            <Text style={styles.rankingTotalPillText}>
-                                {rankingData.length} participantes
                             </Text>
                         </View>
                     </View>
