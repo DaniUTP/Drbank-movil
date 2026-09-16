@@ -3,12 +3,10 @@ import React, { useCallback, useMemo, useState } from "react";
 import {
     Keyboard,
     Pressable,
-    ScrollView,
     Text,
     TextInput,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import InputField from "../../common/InputField";
 import { useTheme } from "../../common/ThemeContext";
 import { getFCMToken } from "../../FirebaseConfig";
@@ -198,12 +196,7 @@ function RegisterScreen() {
   // RENDER
   // ============================================
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView
-        contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+    <View style={{ backgroundColor: colors.card }}>
       <View style={styles.formContent}>
         <Text style={titleStyle}>Crea tu cuenta</Text>
         <Text style={subtitleStyle}>Únete a la red médica del futuro.</Text>
@@ -290,8 +283,7 @@ function RegisterScreen() {
           )}
         </Pressable>
       </View>
-      </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 export default RegisterScreen

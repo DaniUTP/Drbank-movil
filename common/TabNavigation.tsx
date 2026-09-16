@@ -21,7 +21,7 @@ const TabNavigation = memo<TabNavigationProps>(function TabNavigation({
   const { colors } = useTheme();
 
   return (
-    <View style={{ flexDirection: "row", backgroundColor: colors.card, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginHorizontal: 16, marginTop: 16 }}>
+    <View style={{ flexDirection: "row", backgroundColor: colors.card, paddingHorizontal: 4, paddingVertical: 4, borderRadius: 12, marginHorizontal: 16, marginTop: 16 }}>
       {tabs.map((tab) => (
         <Pressable
           key={tab.id}
@@ -29,6 +29,9 @@ const TabNavigation = memo<TabNavigationProps>(function TabNavigation({
           style={{
             flex: 1,
             paddingVertical: 10,
+            paddingHorizontal: 2,
+            alignItems: "center",
+            justifyContent: "center",
             borderRadius: 8,
             backgroundColor: activeTab === tab.id ? colors.buttonBg : "transparent",
           }}
@@ -36,10 +39,14 @@ const TabNavigation = memo<TabNavigationProps>(function TabNavigation({
           <Text
             style={{
               color: activeTab === tab.id ? colors.buttonText : colors.subtitle,
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: activeTab === tab.id ? "600" : "400",
               textAlign: "center",
+              flexShrink: 1,
             }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
           >
             {tab.label}
           </Text>

@@ -1,11 +1,13 @@
 import { useTheme } from "@/common/ThemeContext";
 import { Tabs, usePathname, useRouter } from "expo-router";
-import { BarChart3, Brain, Calendar, ChevronRight, Headphones, Home, Layers, Plus, User, X } from "lucide-react-native";
+import { BarChart3, Calendar, ChevronRight, FileText, Headphones, HeartPulse, Home, Layers, Plus, User, X } from "lucide-react-native";
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const TAB_BAR_BASE_HEIGHT = 68;
 
 // ============================================
 // MEMOIZED MENU OPTIONS
@@ -17,6 +19,7 @@ interface MenuOptionProps {
   title: string;
   description: string;
   onPress: () => void;
+  colors: ReturnType<typeof useTheme>["colors"];
 }
 
 const MenuOption = memo(function MenuOption({
@@ -26,10 +29,11 @@ const MenuOption = memo(function MenuOption({
   title,
   description,
   onPress,
+  colors,
 }: MenuOptionProps) {
   return (
     <TouchableOpacity
-      style={[styles.menuOption, { backgroundColor: bgColor }]}
+      style={[styles.menuOption, { backgroundColor: bgColor, borderColor: colors.inputBorder }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -37,14 +41,14 @@ const MenuOption = memo(function MenuOption({
         {icon}
       </View>
       <View style={styles.menuOptionContent}>
-        <Text style={[styles.menuOptionTitle, { color: "#0f172a" }]}>
+        <Text style={[styles.menuOptionTitle, { color: colors.text }]}>
           {title}
         </Text>
-        <Text style={[styles.menuOptionDesc, { color: "#64748b" }]}>
+        <Text style={[styles.menuOptionDesc, { color: colors.subtitle }]}>
           {description}
         </Text>
       </View>
-      <ChevronRight size={20} color="#94a3b8" />
+      <ChevronRight size={20} color={colors.subtitle} />
     </TouchableOpacity>
   );
 });
@@ -52,13 +56,15 @@ const MenuOption = memo(function MenuOption({
 // ============================================
 // FLOATING MENU COMPONENT
 // ============================================
-type RouteType = "/calendar-detail" | "/history-exam" | "/support" | "/download-exams";
+type RouteType = "/calendar-detail" | "/history-exam" | "/support" | "/download-exams" | "/request-medical-assistance";
 
 interface FloatingMenuProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigate: (route: RouteType) => void;
   colors: ReturnType<typeof useTheme>['colors'];
+  darkMode: boolean;
+  buttonTopY: number | null;
 }
 
 const FloatingMenu = memo(function FloatingMenu({
@@ -66,7 +72,11 @@ const FloatingMenu = memo(function FloatingMenu({
   onClose,
   onNavigate,
   colors,
+  darkMode,
+  buttonTopY,
 }: FloatingMenuProps) {
+  const overlayRef = useRef<View>(null);
+  const [buttonBottom, setButtonBottom] = useState<number | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
 
@@ -98,6 +108,17 @@ const FloatingMenu = memo(function FloatingMenu({
     }
   }, [isOpen, fadeAnim, scaleAnim]);
 
+  const alignCloseButton = useCallback(() => {
+    if (buttonTopY == null) return;
+    overlayRef.current?.measureInWindow((_x, overlayY, _width, overlayHeight) => {
+      setButtonBottom(overlayY + overlayHeight - buttonTopY - 56);
+    });
+  }, [buttonTopY]);
+
+  useEffect(() => {
+    if (isOpen) requestAnimationFrame(alignCloseButton);
+  }, [isOpen, alignCloseButton]);
+
   const handleOptionPress = useCallback((option: string) => {
     onClose();
     switch (option) {
@@ -110,13 +131,16 @@ const FloatingMenu = memo(function FloatingMenu({
       case "download":
         onNavigate("/download-exams");
         break;
+      case "medical-assistance":
+        onNavigate("/request-medical-assistance");
+        break;
     }
   }, [onClose, onNavigate] as const);
 
   if (!isOpen) return null;
 
   return (
-    <View style={styles.menuOverlay}>
+    <View ref={overlayRef} collapsable={false} style={styles.menuOverlay} onLayout={alignCloseButton}>
       <Animated.View style={[styles.menuBackdrop, { opacity: fadeAnim }]}>
         <Pressable style={styles.backdropPressable} onPress={onClose} />
       </Animated.View>
@@ -125,7 +149,7 @@ const FloatingMenu = memo(function FloatingMenu({
         backgroundColor: colors.card,
         transform: [{ scale: scaleAnim }]
       }]}>
-        <View style={styles.menuHeader}>
+        <View style={[styles.menuHeader, { borderBottomColor: colors.inputBorder }]}>
           <Text style={[styles.menuTitle, { color: colors.text }]}>¿Qué deseas hacer?</Text>
         </View>
 
@@ -136,34 +160,46 @@ const FloatingMenu = memo(function FloatingMenu({
         >
           <View style={styles.optionsList}>
             <MenuOption
-              bgColor="#f0fdf4"
+              bgColor={darkMode ? "#102b28" : "#f0fdf4"}
               iconBg="#16a34a"
               icon={<Calendar size={24} color="white" />}
               title="Historial de exámenes"
               description="Revisa tus exámenes pasados"
               onPress={() => handleOptionPress("calendar")}
+              colors={colors}
             />
             <MenuOption
-              bgColor="#dbeafe"
+              bgColor={darkMode ? "#112b45" : "#dbeafe"}
               iconBg="#0284c7"
-              icon={<Brain size={24} color="white" />}
+              icon={<FileText size={24} color="white" />}
               title="Descarga de exámenes"
               description="Descarga exámenes para practicar"
               onPress={() => handleOptionPress("download")}
+              colors={colors}
             />
             <MenuOption
-              bgColor="#fdf2f8"
+              bgColor={darkMode ? "#342038" : "#fdf2f8"}
               iconBg="#db2777"
               icon={<Headphones size={24} color="white" />}
               title="Soporte"
               description="¿Necesitas ayuda?"
               onPress={() => handleOptionPress("support")}
+              colors={colors}
+            />
+            <MenuOption
+              bgColor={darkMode ? "#392126" : "#fff1f2"}
+              iconBg="#dc2626"
+              icon={<HeartPulse size={24} color="white" />}
+              title="Solicitar asistencia médica"
+              description="Contacta con nuestro equipo médico"
+              onPress={() => handleOptionPress("medical-assistance")}
+              colors={colors}
             />
           </View>
         </ScrollView>
       </Animated.View>
 
-      <View style={styles.closeButtonWrapper}>
+      <View style={[styles.closeButtonWrapper, { bottom: buttonBottom ?? 0, opacity: buttonBottom == null ? 0 : 1 }]}>
         <TouchableOpacity
           style={styles.closeButtonLarge}
           onPress={onClose}
@@ -180,10 +216,16 @@ const FloatingMenu = memo(function FloatingMenu({
 // MAIN TAB LAYOUT CONTENT
 // ============================================
 function TabLayoutContent() {
-  const { colors } = useTheme();
+  const { colors, darkMode } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const pathname = usePathname();
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const addButtonRef = useRef<View>(null);
+  const [buttonTopY, setButtonTopY] = useState<number | null>(null);
+  const measureAddButton = useCallback(() => {
+    addButtonRef.current?.measureInWindow((_x, y) => setButtonTopY(y));
+  }, []);
 
   // Close menu when navigating away
   useEffect(() => {
@@ -204,32 +246,33 @@ function TabLayoutContent() {
 
   // Toggle handler
   const handleToggleMenu = useCallback(() => {
+    measureAddButton();
     setIsAddOpen(prev => !prev);
-  }, []);
+  }, [measureAddButton]);
 
   // Tab bar style options
   const tabBarStyle = useMemo(() => ({
     backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    height: 65,
-    paddingBottom: 15,
+    borderTopColor: colors.inputBorder,
     paddingTop: 8,
-    marginBottom: 35,
+    height: TAB_BAR_BASE_HEIGHT + insets.bottom,
+    paddingBottom: Math.max(insets.bottom, 8),
     elevation: 0,
-  }), [colors.card]);
+  }), [colors.card, colors.inputBorder, insets.bottom]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: '#ffffff' }]} edges={['left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['left', 'right']}>
       <Tabs
         screenOptions={{
           headerShown: false,
           tabBarStyle,
           tabBarActiveTintColor: "#0284c7",
-          tabBarInactiveTintColor: "#64748b",
+          tabBarInactiveTintColor: darkMode ? "#94a3b8" : "#64748b",
           tabBarShowLabel: true,
           tabBarLabelStyle: {
-            fontSize: 11,
+            fontSize: 10,
+            marginBottom: 2,
           },
         }}
       >
@@ -259,7 +302,7 @@ function TabLayoutContent() {
             title: "",
             tabBarIcon: () => (
               <View style={styles.addButtonContainer}>
-                <View style={styles.addButton}>
+                <View ref={addButtonRef} collapsable={false} onLayout={measureAddButton} style={styles.addButton}>
                   <Plus size={28} color="white" />
                 </View>
               </View>
@@ -288,6 +331,8 @@ function TabLayoutContent() {
         onClose={handleCloseMenu}
         onNavigate={handleNavigate}
         colors={colors}
+        darkMode={darkMode}
+        buttonTopY={buttonTopY}
       />
     </SafeAreaView>
   );
@@ -369,7 +414,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   optionsScrollView: {
-    maxHeight: 300,
+    maxHeight: Math.min(380, SCREEN_HEIGHT * 0.52),
     paddingHorizontal: 4,
     paddingBottom: 12,
   },
@@ -384,6 +429,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderRadius: 16,
+    borderWidth: 1,
     marginBottom: 8,
   },
   menuIconContainer: {
@@ -412,7 +458,7 @@ const styles = StyleSheet.create({
   },
   closeButtonWrapper: {
     position: 'absolute',
-    bottom: 55,
+    bottom: 30,
     alignSelf: 'center',
   },
   closeButtonLarge: {

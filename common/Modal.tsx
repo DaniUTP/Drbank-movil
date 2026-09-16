@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { Dimensions, Image, Pressable, Modal as RNModal, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Image, ImageStyle, Pressable, Modal as RNModal, StyleProp, StyleSheet, Text, View } from "react-native";
 import { useTheme } from "./ThemeContext";
 
 interface ModalProps {
@@ -9,8 +9,10 @@ interface ModalProps {
   children: React.ReactNode;
   icon?: React.ReactNode;
   logoSource?: any;
+  logoStyle?: StyleProp<ImageStyle>;
   showFooter?: boolean;
   footerText?: string;
+  compactBody?: boolean;
 }
 
 const { width } = Dimensions.get('window');
@@ -22,10 +24,12 @@ const Modal = memo<ModalProps>(function Modal({
   children,
   icon,
   logoSource,
+  logoStyle,
   showFooter = true,
   footerText = "Aceptar",
+  compactBody = false,
 }) {
-  const { colors } = useTheme();
+  const { colors, darkMode } = useTheme();
 
   return (
     <RNModal
@@ -34,22 +38,26 @@ const Modal = memo<ModalProps>(function Modal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={[styles.modalCard, { backgroundColor: colors.background }]}>
+      <View style={[styles.overlay, darkMode && { backgroundColor: "rgba(0, 0, 0, 0.45)" }]}>
+        <View style={[styles.modalCard, { backgroundColor: darkMode ? colors.card : colors.background }, darkMode && { borderWidth: 1, borderColor: colors.inputBorder }]}>
           
           {/* HEADER REDISEÑADO: Logo arriba, título abajo */}
-          <View style={styles.headerContainer}>
-            {logoSource && (
-              <Image source={logoSource} style={styles.logo} resizeMode="contain" />
-            )}
-            {icon && <View style={styles.iconWrapper}>{icon}</View>}
-            <Text style={[styles.title, { color: colors.text }]}>
-              {title}
-            </Text>
-          </View>
+          {(logoSource || icon || title) && (
+            <View style={styles.headerContainer}>
+              {logoSource && (
+                <Image source={logoSource} style={[styles.logo, logoStyle]} resizeMode="contain" />
+              )}
+              {icon && <View style={styles.iconWrapper}>{icon}</View>}
+              {!!title && (
+                <Text style={[styles.title, { color: colors.text }]}>
+                  {title}
+                </Text>
+              )}
+            </View>
+          )}
 
           {/* Body */}
-          <View style={styles.body}>
+          <View style={[styles.body, !showFooter && styles.bodyWithoutFooter, compactBody && styles.compactBody]}>
             {children}
           </View>
 
@@ -119,6 +127,12 @@ const styles = StyleSheet.create({
   body: {
     marginBottom: 24,
     paddingHorizontal: 4,
+  },
+  bodyWithoutFooter: {
+    marginBottom: 0,
+  },
+  compactBody: {
+    marginBottom: 8,
   },
   footer: {
     borderTopWidth: 1,

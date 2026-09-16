@@ -4,7 +4,9 @@ import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
     ActivityIndicator,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     Pressable,
     ScrollView,
     Text,
@@ -14,6 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../common/ThemeContext";
+import ThemeToggle from "../../common/ThemeToggle";
 import { styles } from "./styles";
 
 import {
@@ -214,19 +217,13 @@ export default function ProfileScreen() {
     const handleBack = useCallback(() => router.back(), [router]);
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
             <View style={[styles.header, { backgroundColor: colors.background }]}>
                 <Pressable onPress={handleBack} style={styles.backButton}>
                     <ArrowLeft size={24} color={colors.text} />
                 </Pressable>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Perfil</Text>
-                <Pressable onPress={toggleDarkMode} style={styles.notification}>
-                    {darkMode ? (
-                        <Sun size={22} color={colors.text} />
-                    ) : (
-                        <Moon size={22} color={colors.text} />
-                    )}
-                </Pressable>
+                <ThemeToggle />
             </View>
 
             <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -264,7 +261,7 @@ export default function ProfileScreen() {
                             </View>
                             <View style={styles.infoContent}>
                                 <Text style={[styles.infoLabel, { color: colors.subtitle }]}>Nombre(s)</Text>
-                                <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={1}>
+                                <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={2}>
                                     {formData.firstName || "Sin registrar"}
                                 </Text>
                             </View>
@@ -285,7 +282,7 @@ export default function ProfileScreen() {
                             </View>
                             <View style={styles.infoContent}>
                                 <Text style={[styles.infoLabel, { color: colors.subtitle }]}>Apellidos</Text>
-                                <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={1}>
+                                <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={2}>
                                     {formData.lastName || "Sin registrar"}
                                 </Text>
                             </View>
@@ -306,7 +303,7 @@ export default function ProfileScreen() {
                             </View>
                             <View style={styles.infoContent}>
                                 <Text style={[styles.infoLabel, { color: colors.subtitle }]}>Correo electrónico</Text>
-                                <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={1}>
+                                <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={2}>
                                     {formData.email}
                                 </Text>
                             </View>
@@ -321,7 +318,7 @@ export default function ProfileScreen() {
                             </View>
                             <View style={styles.infoContent}>
                                 <Text style={[styles.infoLabel, { color: colors.subtitle }]}>Celular</Text>
-                                <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={1}>
+                                <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={2}>
                                     {formData.phone || "Sin registrar"}
                                 </Text>
                             </View>
@@ -342,7 +339,7 @@ export default function ProfileScreen() {
                             </View>
                             <View style={styles.infoContent}>
                                 <Text style={[styles.infoLabel, { color: colors.subtitle }]}>Universidad</Text>
-                                <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={1}>
+                                <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={2}>
                                     {formData.university || "Sin registrar"}
                                 </Text>
                             </View>
@@ -535,8 +532,12 @@ export default function ProfileScreen() {
                 transparent={true}
                 onRequestClose={() => setShowEditModal(false)}
             >
+                <KeyboardAvoidingView
+                    style={styles.keyboardAvoidingView}
+                    behavior={Platform.OS === "ios" ? "padding" : undefined}
+                >
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: darkMode ? "#475569" : colors.inputBorder }]}>
                         <View style={styles.modalHeader}>
                             <Text style={[styles.modalTitle, { color: colors.text }]}>
                                 Editar {getFieldLabel(editingField)}
@@ -574,6 +575,7 @@ export default function ProfileScreen() {
                         </View>
                     </View>
                 </View>
+                </KeyboardAvoidingView>
             </Modal>
         </SafeAreaView>
     );

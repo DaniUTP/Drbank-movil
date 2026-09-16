@@ -9,6 +9,7 @@ export const profileSlice = api.injectEndpoints({
       query: () => ({
         method: 'GET',
         url: '/auth/me',
+        timeout: 15000,
       }),
     }),
     updateProfile: builder.mutation<UpdateProfileResponseDTO, UpdateProfileRequestDTO>({

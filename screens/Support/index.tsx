@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Modal from "../../common/Modal";
+import ThemeToggle from "../../common/ThemeToggle";
 import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
 
@@ -169,7 +170,7 @@ export default function SupportScreen() {
                 <Text style={[styles.headerTitle, { color: colors.text }]}>
                     Centro de Soporte
                 </Text>
-                <View style={styles.headerPlaceholder} />
+                <ThemeToggle />
             </View>
 
             <ScrollView
@@ -193,11 +194,9 @@ export default function SupportScreen() {
                             { backgroundColor: darkMode ? "#0f172a" : "#f8fafc", borderColor: darkMode ? "#334155" : "#e2e8f0" }
                         ]}>
                             <User size={18} color={colors.subtitle || "#64748b"} />
-                            <TextInput
-                                style={[styles.inputField, { color: colors.text }]}
-                                value={isProfileLoading ? "Cargando..." : formData.nombreCompleto}
-                                editable={false}
-                            />
+                            <Text style={[styles.inputField, { color: colors.text }]}>
+                                {isProfileLoading ? "Cargando..." : formData.nombreCompleto}
+                            </Text>
                         </View>
                     </View>
 
@@ -211,11 +210,9 @@ export default function SupportScreen() {
                             { backgroundColor: darkMode ? "#0f172a" : "#f8fafc", borderColor: darkMode ? "#334155" : "#e2e8f0" }
                         ]}>
                             <Mail size={18} color={colors.subtitle || "#64748b"} />
-                            <TextInput
-                                style={[styles.inputField, { color: colors.text }]}
-                                value={isProfileLoading ? "Cargando..." : formData.email}
-                                editable={false}
-                            />
+                            <Text style={[styles.inputField, { color: colors.text }]}>
+                                {isProfileLoading ? "Cargando..." : formData.email}
+                            </Text>
                         </View>
                     </View>
 
@@ -344,8 +341,9 @@ export default function SupportScreen() {
                 onClose={() => setShowMotivoModal(false)}
                 title="Motivo de Contacto"
                 footerText="Cerrar"
+                compactBody
             >
-                <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
                     {MOTIVOS.map((motivo) => {
                         const isSelected = formData.motivo === motivo;
                         return (

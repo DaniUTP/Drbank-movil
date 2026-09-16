@@ -1,7 +1,9 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
+import { setupListeners } from '@reduxjs/toolkit/query';
 import '../services/auth/activate-account.rtkq'; // Import to register endpoints
 import '../services/auth/login.rtkq'; // Import to register endpoints
 import '../services/auth/recovery.rtkq'; // Import to register endpoints
+import '../services/doctor/doctor.rtkq'; // Import to register endpoints
 import '../services/profile/profile.rtkq'; // Import to register endpoints
 import '../services/question/area.rtkq'; // Import to register endpoints
 import '../services/question/exam-type.rtkq'; // Import to register endpoints
@@ -11,6 +13,7 @@ import '../services/question/question.rtkq'; // Import to register endpoints
 import '../services/question/specialty.rtkq'; // Import to register endpoints
 import '../services/question/theme.rtkq'; // Import to register endpoints
 import '../services/question/year.rtkq'; // Import to register endpoints
+import '../services/student/student.rtkq'; // Import to register endpoints
 import { api } from './api';
 
 const rootReducer = combineReducers({
@@ -23,6 +26,8 @@ export const store = configureStore({
     getDefaultMiddleware().concat(api.middleware),
   reducer: rootReducer,
 });
+
+setupListeners(store.dispatch);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

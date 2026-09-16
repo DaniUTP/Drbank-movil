@@ -1,11 +1,8 @@
 import { StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
-  contentContainer: {
-    flexGrow: 1,
-  },
   formContent: {
-    paddingBottom: 12,
+    paddingBottom: 0,
   },
   title: {
     fontSize: 26,

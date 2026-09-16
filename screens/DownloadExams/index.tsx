@@ -1,7 +1,9 @@
 import Modal from "@/common/Modal";
+import { useTheme } from "@/common/ThemeContext";
+import ThemeToggle from "@/common/ThemeToggle";
 import { useDownloadExamsMutation, useLazyGetExamQuery } from "@/services/question/exam.rtkq";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Brain, Check, CheckCircle, Download, Search, X } from "lucide-react-native";
+import { ArrowLeft, FileText, Check, CheckCircle, Download, Search, X } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
@@ -23,6 +25,7 @@ interface ExamDownload {
 }
 
 export default function DownloadExamsScreen() {
+  const { colors, darkMode } = useTheme();
   const router = useRouter();
   const [searchText, setSearchText] = useState("");
   const [selectedExams, setSelectedExams] = useState<Set<string>>(new Set());
@@ -121,16 +124,16 @@ export default function DownloadExamsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-        <View style={styles.header}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <ArrowLeft size={24} color="#1e293b" />
+            <ArrowLeft size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Descarga de Exámenes</Text>
-          <View style={{ width: 40 }} />
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Descarga de Exámenes</Text>
+          <ThemeToggle />
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Cargando exámenes...</Text>
+          <Text style={[styles.loadingText, { color: colors.subtitle }]}>Cargando exámenes...</Text>
         </View>
       </SafeAreaView>
     );
@@ -138,30 +141,30 @@ export default function DownloadExamsScreen() {
 
   if (error) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-        <View style={styles.header}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <ArrowLeft size={24} color="#1e293b" />
+            <ArrowLeft size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Descarga de Exámenes</Text>
-          <View style={{ width: 40 }} />
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Descarga de Exámenes</Text>
+          <ThemeToggle />
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Error al cargar exámenes</Text>
+          <Text style={[styles.loadingText, { color: colors.subtitle }]}>Error al cargar exámenes</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft size={24} color="#1e293b" />
+          <ArrowLeft size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Descarga de Exámenes</Text>
-        <View style={{ width: 40 }} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Descarga de Exámenes</Text>
+        <ThemeToggle />
       </View>
 
       <FlatList
@@ -171,7 +174,8 @@ export default function DownloadExamsScreen() {
           <View
             style={[
               styles.examCard,
-              selectedExams.has(exam.id) && styles.examCardSelected
+              selectedExams.has(exam.id) && styles.examCardSelected,
+              { backgroundColor: selectedExams.has(exam.id) ? (darkMode ? "#102b45" : "#f0f9ff") : colors.card, borderColor: selectedExams.has(exam.id) ? "#0284c7" : colors.inputBorder }
             ]}
           >
             <Pressable
@@ -188,12 +192,12 @@ export default function DownloadExamsScreen() {
                 )}
               </View>
             </Pressable>
-            <View style={styles.examIconContainer}>
-              <Brain size={24} color="#0284c7" />
+            <View style={[styles.examIconContainer, darkMode && { backgroundColor: "#102b45" }]}>
+              <FileText size={24} color="#0284c7" />
             </View>
             <View style={styles.examInfo}>
-              <Text style={styles.examTitle}>{exam.title}</Text>
-              <Text style={styles.examMeta}>
+              <Text style={[styles.examTitle, { color: colors.text }]} numberOfLines={2}>{exam.title}</Text>
+              <Text style={[styles.examMeta, { color: colors.subtitle }]}>
                 {exam.category} • {exam.questions} preguntas
               </Text>
             </View>
@@ -214,10 +218,10 @@ export default function DownloadExamsScreen() {
         ListHeaderComponent={() => (
           <View style={styles.listHeader}>
             {/* Search Input */}
-            <View style={styles.searchContainer}>
+            <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
               <Search size={20} color="#64748b" style={styles.searchIcon} />
               <TextInput
-                style={styles.searchInput}
+                style={[styles.searchInput, { color: colors.text }]}
                 placeholder="Buscar exámenes..."
                 placeholderTextColor="#94a3b8"
                 value={searchText}
@@ -232,8 +236,8 @@ export default function DownloadExamsScreen() {
 
             {/* Selected Exams Info */}
             {selectedExams.size >= 2 && (
-              <View style={styles.selectedInfo}>
-                <Text style={styles.selectedText}>
+              <View style={[styles.selectedInfo, darkMode && { backgroundColor: "#102b45" }]}>
+                <Text style={[styles.selectedText, darkMode && { color: "#7dd3fc" }]}>
                   {selectedExams.size} examen(es) seleccionado(s)
                 </Text>
                 <Pressable
@@ -245,13 +249,13 @@ export default function DownloadExamsScreen() {
               </View>
             )}
 
-            <Text style={styles.sectionTitle}>Lista de Exámenes</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Lista de Exámenes</Text>
           </View>
         )}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No se encontraron exámenes</Text>
+            <Text style={[styles.emptyText, { color: colors.subtitle }]}>No se encontraron exámenes</Text>
           </View>
         )}
       />
@@ -262,7 +266,7 @@ export default function DownloadExamsScreen() {
         title={modalTitle}
         icon={<CheckCircle size={48} color="#22c55e" />}
       >
-        <Text style={{ fontSize: 15, color: "#64748b", textAlign: "center", lineHeight: 22 }}>
+        <Text style={{ fontSize: 15, color: colors.subtitle, textAlign: "center", lineHeight: 22 }}>
           {modalMessage}
         </Text>
       </Modal>

@@ -304,6 +304,9 @@ export const styles = StyleSheet.create({
   },
 
   createButton: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
     paddingVertical: 18,
     borderRadius: 15,
     alignItems: "center",

@@ -1,7 +1,12 @@
 // React Native Firebase SDK - Modular API (v22+)
 import { getApp } from '@react-native-firebase/app';
 import { AuthorizationStatus, getMessaging, getToken, onMessage, requestPermission, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
-import { Alert, PermissionsAndroid, Platform } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
+
+export type ForegroundNotification = {
+  title: string;
+  message: string;
+};
 
 // Get messaging instance using modular API
 const app = getApp();
@@ -55,17 +60,23 @@ export async function getFCMToken() {
 }
 
 // Listen for incoming messages - Using modular API
-export function setupMessageListener() {
+export function setupMessageListener(onNotification: (notification: ForegroundNotification) => void) {
   const unsubscribe = onMessage(messaging, async remoteMessage => {
     console.log('Received FCM message:', remoteMessage);
 
-    // Display local notification when app is in foreground
-    console.log('Notification data:', remoteMessage);
+    const dataTitle = typeof remoteMessage.data?.title === 'string'
+      ? remoteMessage.data.title
+      : undefined;
+    const dataBody = typeof remoteMessage.data?.body === 'string'
+      ? remoteMessage.data.body
+      : typeof remoteMessage.data?.message === 'string'
+        ? remoteMessage.data.message
+        : undefined;
 
-    Alert.alert(
-      remoteMessage.notification?.title || 'Notificación',
-      remoteMessage.notification?.body || 'Tienes un nuevo mensaje'
-    );
+    onNotification({
+      title: remoteMessage.notification?.title || dataTitle || 'Notificación',
+      message: remoteMessage.notification?.body || dataBody || 'Tienes un nuevo mensaje',
+    });
   });
   return unsubscribe;
 }

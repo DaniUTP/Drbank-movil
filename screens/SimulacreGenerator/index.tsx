@@ -4,17 +4,16 @@ import { useSpecialtyQuery } from "@/services/question/specialty.rtkq";
 import { useThemeQuery } from "@/services/question/theme.rtkq";
 import { useYearQuery } from "@/services/question/year.rtkq";
 import Slider from "@react-native-community/slider";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
     ArrowLeft,
-    Bell,
     Check,
     ChevronDown,
     Search,
     Settings,
     X,
 } from "lucide-react-native";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -27,17 +26,22 @@ import {
     TextInput,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../common/ThemeContext";
+import ThemeToggle from "../../common/ThemeToggle";
 import { useExamMutation } from "../../services/question/exam.rtkq";
 import { useLazyQuestionQuery } from "../../services/question/question.rtkq";
-import { decryptLaravel } from "../../utils/encryption";
 import { styles } from "./styles";
 
 export default function SimulacreGeneratorScreen() {
-  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { colors, darkMode } = useTheme();
   const router = useRouter();
-  const [fetchQuestions, { isLoading: isLoadingQuestions }] = useLazyQuestionQuery();
+  const [fetchQuestions] = useLazyQuestionQuery();
+  const [isCreatingExam, setIsCreatingExam] = useState(false);
+  useFocusEffect(useCallback(() => {
+    setIsCreatingExam(false);
+  }, []));
   const [createExam] = useExamMutation();
 
   // Form state
@@ -52,16 +56,25 @@ export default function SimulacreGeneratorScreen() {
 
   // API calls with regular hooks
   const { data: examTypesData = [], isLoading: examTypesLoading } = useExamTypeQuery();
-  const { data: areasData = [], isLoading: areasLoading } = useAreaQuery();
+  const { data: areasData = [], isLoading: areasLoading } = useAreaQuery(
+    { exam: examType },
+    { skip: !examType }
+  );
   const { data: yearsData = [], isLoading: yearsLoading } = useYearQuery();
 
   // Get specialties based on selected area
   const selectedAreaId = areasData.find((a: any) => a.name === area)?.id || 0;
-  const { data: specialtiesData = [], isLoading: specialtiesLoading } = useSpecialtyQuery({ area: selectedAreaId }, { skip: !selectedAreaId });
+  const { data: specialtiesData = [], isLoading: specialtiesLoading } = useSpecialtyQuery(
+    { area: selectedAreaId, exam: examType },
+    { skip: !examType || !selectedAreaId }
+  );
 
   // Get themes based on selected specialty
   const selectedSpecialtyId = specialtiesData.find((s: any) => s.name === specialty)?.id || 0;
-  const { data: themesData = [], isLoading: themesLoading } = useThemeQuery({ specialty: selectedSpecialtyId }, { skip: !selectedSpecialtyId });
+  const { data: themesData = [], isLoading: themesLoading } = useThemeQuery(
+    { specialty: selectedSpecialtyId, exam: examType },
+    { skip: !examType || !selectedSpecialtyId }
+  );
 
   // Modal states
   const [showExamTypeModal, setShowExamTypeModal] = useState(false);
@@ -140,6 +153,9 @@ export default function SimulacreGeneratorScreen() {
 
   const selectExamType = (type: { id: string; name: string }) => {
     setExamType(type.name);
+    setArea("");
+    setSpecialty("");
+    setTheme("");
     setShowExamTypeModal(false);
     setExamTypeSearch("");
   };
@@ -249,7 +265,12 @@ export default function SimulacreGeneratorScreen() {
         style={[
           styles.examModeItem,
           isSelected && styles.examModeItemSelected,
-          { borderColor: isSelected ? "#0284c7" : colors.subtitle }
+          {
+            borderColor: isSelected ? "#0284c7" : colors.inputBorder,
+            backgroundColor: isSelected
+              ? (darkMode ? "#164e63" : "#f0f9ff")
+              : colors.card,
+          }
         ]}
         onPress={() => selectExamMode(item)}
       >
@@ -264,7 +285,7 @@ export default function SimulacreGeneratorScreen() {
               <Text style={[styles.examModeItemTitle, { color: colors.text }]}>
                 {item.name}
               </Text>
-              <Text style={[styles.examModeItemDescription, { color: colors.subtitle }]}>
+              <Text style={[styles.examModeItemDescription, { color: darkMode && isSelected ? "#e2e8f0" : colors.subtitle }]}>
                 {item.description}
               </Text>
             </View>
@@ -279,7 +300,7 @@ export default function SimulacreGeneratorScreen() {
           {item.details.map((detail, index) => (
             <View key={index} style={styles.examModeDetailRow}>
               <View style={[styles.detailDot, { backgroundColor: isSelected ? "#0284c7" : colors.subtitle }]} />
-              <Text style={[styles.examModeDetailText, { color: colors.subtitle }]}>
+              <Text style={[styles.examModeDetailText, { color: darkMode && isSelected ? "#e2e8f0" : colors.subtitle }]}>
                 {detail}
               </Text>
             </View>
@@ -299,9 +320,7 @@ export default function SimulacreGeneratorScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           Generador
         </Text>
-        <Pressable style={styles.notification}>
-          <Bell size={22} color={colors.text} />
-        </Pressable>
+        <ThemeToggle />
       </View>
 
       <KeyboardAvoidingView
@@ -371,14 +390,14 @@ export default function SimulacreGeneratorScreen() {
                   {
                     backgroundColor: colors.card,
                     borderColor: colors.subtitle,
-                    opacity: areasLoading ? 0.7 : 1,
+                    opacity: examType && !areasLoading ? 1 : 0.6,
                   }
                 ]}
-                onPress={() => !areasLoading && setShowAreaModal(true)}
-                disabled={areasLoading}
+                onPress={() => examType && !areasLoading && setShowAreaModal(true)}
+                disabled={!examType || areasLoading}
               >
                 <Text style={[styles.selectorText, area ? { color: colors.text } : { color: colors.subtitle }]}>
-                  {areasLoading ? "Cargando..." : (area || "Selecciona el área")}
+                  {areasLoading ? "Cargando..." : (area || (examType ? "Selecciona el área" : "Selecciona primero el tipo de examen"))}
                 </Text>
                 <ChevronDown size={20} color={colors.subtitle} />
               </Pressable>
@@ -490,7 +509,7 @@ export default function SimulacreGeneratorScreen() {
             onRequestClose={() => setShowExamTypeModal(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background, marginBottom: insets.bottom }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
                     Tipo de Examen
@@ -538,7 +557,7 @@ export default function SimulacreGeneratorScreen() {
             onRequestClose={() => setShowAreaModal(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background, marginBottom: insets.bottom }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
                     Área
@@ -586,7 +605,7 @@ export default function SimulacreGeneratorScreen() {
             onRequestClose={() => setShowSpecialtyModal(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background, marginBottom: insets.bottom }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
                     Especialidades
@@ -634,7 +653,7 @@ export default function SimulacreGeneratorScreen() {
             onRequestClose={() => setShowThemeModal(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background, marginBottom: insets.bottom }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
                     Selecciona el Tema
@@ -682,7 +701,7 @@ export default function SimulacreGeneratorScreen() {
             onRequestClose={() => setShowYearsModal(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background, marginBottom: insets.bottom }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
                     Seleccionar Años
@@ -730,7 +749,7 @@ export default function SimulacreGeneratorScreen() {
             onRequestClose={() => setShowExamModeModal(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background, marginBottom: insets.bottom }]}>
                 <View style={styles.modalHeader}>
                   <View>
                     <Text style={[styles.modalTitle, { color: colors.text }]}>
@@ -825,6 +844,7 @@ export default function SimulacreGeneratorScreen() {
               { backgroundColor: examType && examMode ? "#0284c7" : "#94a3b8" }
             ]}
             onPress={async () => {
+              setIsCreatingExam(true);
               const selectedSpecialtyId = specialtiesData.find((s: any) => s.name === specialty)?.id || 0;
               const yearsArray = years ? years.split(',').map(y => y.trim()) : [];
               
@@ -839,14 +859,7 @@ export default function SimulacreGeneratorScreen() {
               try {
                 const result = await fetchQuestions(requestBody).unwrap();
                 
-                // Decrypt encrypted fields
-                const decryptedQuestions = result.map((question: any) => ({
-                  ...question,
-                  data: decryptLaravel(question.data),
-                  justification: question.justification ? decryptLaravel(question.justification) : '',
-                  distractorAnalysis: question.distractorAnalysis ? decryptLaravel(question.distractorAnalysis) : '',
-                  reference: question.reference ? decryptLaravel(question.reference) : '',
-                }));
+                const questions = result;
 
                 // 2. Call POST /quiz/exam to create initial exam record
                 let createdExamId = "";
@@ -854,8 +867,8 @@ export default function SimulacreGeneratorScreen() {
                   const examRes = await createExam({
                     exam_type: "simulation",
                     title: `Simulacro - ${examType}`,
-                    description: `${specialty || "General"} (${decryptedQuestions.length} preguntas)`,
-                    total_questions: decryptedQuestions.length,
+                    description: `${specialty || "General"} (${questions.length} preguntas)`,
+                    total_questions: questions.length,
                     started_at: new Date().toISOString(),
                   }).unwrap();
                   createdExamId = examRes?.exam || "";
@@ -876,17 +889,19 @@ export default function SimulacreGeneratorScreen() {
                     timeLimit: timeLimit.toString(),
                     examMode,
                     sourceKey: "simulation",
-                    questions: JSON.stringify(decryptedQuestions),
+                    questions: JSON.stringify(questions),
                   },
                 });
               } catch (error) {
                 console.error('Error fetching questions:', error);
+                setIsCreatingExam(false);
               }
             }}
-            disabled={!examType || !examMode || isLoadingQuestions}
+            disabled={!examType || !examMode || isCreatingExam}
           >
+            {isCreatingExam && <ActivityIndicator size="small" color="#ffffff" />}
             <Text style={styles.createButtonText}>
-              {isLoadingQuestions ? "Cargando..." : "Crear Simulacro"}
+              {isCreatingExam ? "Creando..." : "Crear Simulacro"}
             </Text>
           </Pressable>
 

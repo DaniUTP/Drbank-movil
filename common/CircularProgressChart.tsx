@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { View, Text } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import { useTheme } from "./ThemeContext";
 
 interface CircularProgressChartProps {
   correct: number;
@@ -17,9 +18,10 @@ const CircularProgressChart = memo<CircularProgressChartProps>(function Circular
   strokeWidth = 18,
   showPercentage = true,
 }) {
+  const { colors, darkMode } = useTheme();
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const percentage = Math.round((correct / total) * 100);
+  const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
   const offset = circumference - (percentage / 100) * circumference;
   
   const getColor = () => {
@@ -35,7 +37,7 @@ const CircularProgressChart = memo<CircularProgressChartProps>(function Circular
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#f1f5f9"
+          stroke={darkMode ? "#334155" : "#f1f5f9"}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -54,7 +56,7 @@ const CircularProgressChart = memo<CircularProgressChartProps>(function Circular
       </Svg>
       {showPercentage && (
         <View style={{ position: "absolute", alignItems: "center" }}>
-          <Text style={{ fontSize: 44, fontWeight: "800", color: "#1e293b" }}>{percentage}%</Text>
+          <Text style={{ fontSize: 44, fontWeight: "800", color: colors.text }}>{percentage}%</Text>
         </View>
       )}
     </View>

@@ -4,22 +4,15 @@ import { useTheme } from "@/common/ThemeContext";
 import { Image } from "expo-image";
 import { Slot, usePathname, useRouter, useSegments } from "expo-router";
 import { Moon, Sun } from "lucide-react-native";
+import ThemeToggle from "@/common/ThemeToggle";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // ============================================
 // MEMOIZED HEADER COMPONENT
 // ============================================
-const AuthHeader = memo(function AuthHeader({
-  darkMode,
-  toggleDarkMode,
-  colors,
-}: {
-  darkMode: boolean;
-  toggleDarkMode: () => void;
-  colors: ThemeColors;
-}) {
+const AuthHeader = memo(function AuthHeader() {
   return (
     <View style={styles.header}>
       <Image
@@ -29,17 +22,7 @@ const AuthHeader = memo(function AuthHeader({
         transition={0}
         cachePolicy="memory-disk"
       />
-      <Pressable
-        style={[styles.themeButton, { backgroundColor: colors.themeButton }]}
-        onPress={toggleDarkMode}
-        hitSlop={8}
-      >
-        {darkMode ? (
-          <Sun size={20} color="#facc15" />
-        ) : (
-          <Moon size={20} color="#0f172a" />
-        )}
-      </Pressable>
+      <ThemeToggle />
     </View>
   );
 });
@@ -322,26 +305,21 @@ function LayoutContent() {
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={["top"]}
     >
-      {/* Header */}
-      <AuthHeader
-        darkMode={darkMode}
-        toggleDarkMode={toggleDarkMode}
-        colors={colors}
-      />
-
-      {/* Card with tabs and form */}
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
-        <AuthTabs
-          key={`${activeTab}-${darkMode}`}
-          activeTab={activeTab}
-          colors={colors}
-          onLoginPress={handleLoginPress}
-          onRegisterPress={handleRegisterPress}
-        />
-        <View style={styles.slotContainer}>
-          <Slot />
+      <ScrollView contentContainerStyle={styles.pageContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <AuthHeader />
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <AuthTabs
+            key={`${activeTab}-${darkMode}`}
+            activeTab={activeTab}
+            colors={colors}
+            onLoginPress={handleLoginPress}
+            onRegisterPress={handleRegisterPress}
+          />
+          <View style={styles.slotContainer}>
+            <Slot />
+          </View>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Auth Modal */}
       <AuthModal />
@@ -358,8 +336,12 @@ export default LayoutContent;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#f8fafc',
+  },
+  pageContent: {
+    flexGrow: 1,
+    padding: 20,
+    paddingBottom: 32,
   },
   header: {
     marginTop: 20,
@@ -380,14 +362,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   card: {
-    flex: 1,
+    flexGrow: 1,
     marginTop: 24,
     borderRadius: 30,
     padding: 25,
     minHeight: 0,
   },
   slotContainer: {
-    flex: 1,
     minHeight: 0,
   },
   tabs: {

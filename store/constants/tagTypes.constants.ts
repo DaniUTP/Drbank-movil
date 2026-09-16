@@ -11,5 +11,8 @@ export const enum TagTypes {
   Ranking='Ranking',
   ChangePassword='ChangePassword',
   Support='Support',
-  StudentProgress='StudentProgress'
+  StudentProgress='StudentProgress',
+  Student='Student',
+  Doctor='Doctor',
+  DoctorAvailability='DoctorAvailability',
 }

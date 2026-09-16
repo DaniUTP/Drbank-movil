@@ -1,7 +1,6 @@
 import { useRouter } from "expo-router";
 import {
   ArrowLeft,
-  Brain,
   Calendar,
   CheckCircle,
   ChevronLeft,
@@ -23,6 +22,7 @@ import EmptyState from "../../common/EmptyState";
 import FilterTabs from "../../common/FilterTabs";
 import SearchBar from "../../common/SearchBar";
 import { useTheme } from "../../common/ThemeContext";
+import ThemeToggle from "../../common/ThemeToggle";
 import { styles } from "./styles";
 
 import { useGetExamQuery } from "@/services/question/exam.rtkq";
@@ -97,7 +97,7 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors, isPressed
     if (t.includes("tema") || t.includes("theme") || t.includes("extra")) {
       return <FileText size={24} color="#f43f5e" />;
     }
-    return <Brain size={24} color="#8b5cf6" />;
+    return <FileText size={24} color="#8b5cf6" />;
   };
 
   const getTypeBgColor = () => {
@@ -133,8 +133,8 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors, isPressed
     <Pressable 
       style={[
         styles.examCard, 
-        { backgroundColor: colors.card, borderWidth: 2, borderColor: "#e2e8f0" },
-        isPressed && { borderColor: "#0284c7", backgroundColor: "#f0f9ff" }
+        { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.inputBorder },
+        isPressed && { borderColor: "#0284c7", backgroundColor: colors.card, transform: [{ scale: 0.99 }] }
       ]}
       onPress={() => router.push({
         pathname: "/history-detail",
@@ -428,7 +428,7 @@ export default function HistoryExamsScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           Historial de Exámenes
         </Text>
-        <View style={{ width: 40 }} />
+        <ThemeToggle />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>

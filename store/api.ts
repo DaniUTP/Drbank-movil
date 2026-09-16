@@ -19,6 +19,9 @@ export const api = createApi({
     TagTypes.Ranking,
     TagTypes.ChangePassword,
     TagTypes.Support,
-    TagTypes.StudentProgress
+    TagTypes.StudentProgress,
+    TagTypes.Student,
+    TagTypes.Doctor,
+    TagTypes.DoctorAvailability,
   ],
 });

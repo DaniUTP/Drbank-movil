@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Modal from "../../common/Modal";
+import ThemeToggle from "../../common/ThemeToggle";
 import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
 
@@ -31,6 +32,27 @@ import {
 } from "lucide-react-native";
 
 const PAGE_LIMIT = 10;
+
+const extractHistoryPage = (response: unknown): { items: GetHistoryItemDTO[]; lastPage: number } => {
+    const visited = new Set<object>();
+    const walk = (value: unknown, depth: number): { items: GetHistoryItemDTO[]; lastPage: number } | null => {
+        if (Array.isArray(value)) return { items: value as GetHistoryItemDTO[], lastPage: 1 };
+        if (!value || typeof value !== 'object' || depth > 5 || visited.has(value)) return null;
+        visited.add(value);
+
+        const record = value as Record<string, unknown>;
+        const pageCount = Number(record.last_page ?? record.lastPage ?? record.total_pages ?? 0);
+        const keys = ['history', 'histories', 'data', 'items', 'results', 'records', 'areas', 'specialties', 'themes', 'area', 'specialty', 'theme'];
+        for (const key of keys) {
+            if (!(key in record)) continue;
+            const nested = walk(record[key], depth + 1);
+            if (nested) return { items: nested.items, lastPage: pageCount > 0 ? pageCount : nested.lastPage };
+        }
+        return null;
+    };
+
+    return walk(response, 0) ?? { items: [], lastPage: 1 };
+};
 
 export default function MetricScreen() {
     const { colors, darkMode, toggleDarkMode } = useTheme();
@@ -54,7 +76,8 @@ export default function MetricScreen() {
     const {
         data: historyDataRaw,
         isLoading: historyLoading,
-        isFetching: historyFetching
+        isFetching: historyFetching,
+        isError: historyError,
     } = useGetHistoryQuery({
         page,
         limit: PAGE_LIMIT,
@@ -62,16 +85,9 @@ export default function MetricScreen() {
     });
 
     // Safely extract items array
-    const historyItems: GetHistoryItemDTO[] = useMemo(() => {
-        if (!historyDataRaw) return [];
-        if (Array.isArray(historyDataRaw.history)) return historyDataRaw.history;
-        if (Array.isArray(historyDataRaw)) return historyDataRaw;
-        if (Array.isArray((historyDataRaw as any).data)) return (historyDataRaw as any).data;
-        if (Array.isArray((historyDataRaw as any).items)) return (historyDataRaw as any).items;
-        return [];
-    }, [historyDataRaw]);
-
-    const lastPage = historyDataRaw?.last_page || 1;
+    const historyPage = useMemo(() => extractHistoryPage(historyDataRaw), [historyDataRaw]);
+    const historyItems = historyPage.items;
+    const lastPage = historyPage.lastPage;
     const hasNextPage = page < lastPage;
     const hasPrevPage = page > 1;
 
@@ -122,23 +138,17 @@ export default function MetricScreen() {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
             {/* Header */}
             <View style={[styles.header, { backgroundColor: colors.background }]}>
                 <Pressable onPress={() => router.back()} style={styles.backButton}>
                     <ArrowLeft size={22} color={colors.text} />
                 </Pressable>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Rendimiento Académico</Text>
-                <Pressable onPress={toggleDarkMode} style={styles.notification}>
-                    {darkMode ? (
-                        <Sun size={20} color={colors.text} />
-                    ) : (
-                        <Moon size={20} color={colors.text} />
-                    )}
-                </Pressable>
+                <ThemeToggle />
             </View>
 
-            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
                 {/* Top 10 Ranking Card */}
                 <View style={[styles.rankingCard, { backgroundColor: colors.card }]}>
                     <View style={styles.rankingCardHeader}>
@@ -318,6 +328,11 @@ export default function MetricScreen() {
                                 Cargando datos...
                             </Text>
                         </View>
+                    ) : historyError ? (
+                        <View style={[styles.emptyCard, { backgroundColor: colors.card }]}>
+                            <Text style={[styles.emptyTitle, { color: colors.text }]}>No se pudo cargar el diagnóstico</Text>
+                            <Text style={[styles.emptySubtitle, { color: colors.subtitle }]}>Comprueba tu conexión e inténtalo nuevamente.</Text>
+                        </View>
                     ) : historyItems.length === 0 ? (
                         /* Empty State */
                         <View style={[styles.emptyCard, { backgroundColor: colors.card }]}>
@@ -422,7 +437,6 @@ export default function MetricScreen() {
                     )}
                 </View>
 
-                <View style={styles.bottomSpacing} />
             </ScrollView>
 
             {/* Full Ranking Modal */}

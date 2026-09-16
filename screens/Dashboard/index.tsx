@@ -2,13 +2,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import {
-  Pressable,
-  ScrollView,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import CircularProgress from "../../common/CircularProgress";
 import DashboardHeader from "../../common/DashboardHeader";
 import { useTheme } from "../../common/ThemeContext";
 import { getFCMToken } from "../../FirebaseConfig";
@@ -16,13 +16,14 @@ import { useLogoutMutation } from "../../services/auth/logout.rtkq";
 import { styles } from "./styles";
 
 import {
-  BookOpen,
-  Brain,
-  CalendarDays,
-  Heart,
-  LayoutGrid, LucideIcon,
-  Pill,
-  TrendingUp
+    BookOpen,
+    Brain,
+    CalendarDays,
+    ChevronRight,
+    Heart,
+    LayoutGrid, LucideIcon,
+    Pill,
+    TrendingUp
 } from "lucide-react-native";
 import { useStudentProgressQuery } from "../../services/studentProgress/student-progress.rtkq";
 
@@ -104,53 +105,56 @@ const transformCalendarData = (apiData: any[]): CalendarItem[] => {
 interface DayCardProps {
   item: CalendarItem;
   colors: ReturnType<typeof useTheme>["colors"];
+  darkMode: boolean;
   onPress: (date: string, isLibre: boolean) => void;
   isPressed: boolean;
 }
 
-const DayCard = memo<DayCardProps>(function DayCard({ item, colors, onPress, isPressed }) {
+const DayCard = memo<DayCardProps>(function DayCard({ item, colors, darkMode, onPress, isPressed }) {
   const handlePress = useCallback(() => {
     onPress(item.date, !!item.isLibre);
   }, [onPress, item.date, item.isLibre]);
 
-  const progressColor = item.progress >= 70 ? "#22c55e" : item.progress >= 40 ? "#f59e0b" : "#ef4444";
+  const progressColor = item.progress >= 70 ? "#16a34a" : item.progress >= 40 ? "#f59e0b" : "#0284c7";
+  const numericDay = /^\d{4}-\d{2}-\d{2}$/.test(item.date)
+    ? String(Number(item.date.split("-")[2]))
+    : item.date.match(/\d{1,2}/)?.[0] ?? item.date;
 
   return (
     <Pressable
       style={[
         styles.dayCard,
-        { backgroundColor: colors.card },
+        { backgroundColor: colors.card, borderColor: colors.inputBorder },
         item.isToday && styles.dayCardToday,
-        isPressed && styles.dayCardPressed
+        isPressed && styles.dayCardPressed,
+        isPressed && darkMode && { backgroundColor: "#17243a" }
       ]}
       onPress={handlePress}
     >
-      <View style={[styles.dayIconContainer, { backgroundColor: item.iconColor + "20" }]}>
-        <item.icon size={20} color={item.iconColor} />
+      <View style={[styles.dayDateBadge, item.isToday && styles.dayDateBadgeToday]}>
+        <Text style={[styles.dayText, item.isToday && styles.dayTextToday]}>{item.day}</Text>
+        <Text style={[styles.dayDateNumber, item.isToday && styles.dayDateNumberToday]}>{numericDay}</Text>
       </View>
       <View style={styles.dayContent}>
-        <View style={styles.dayHeader}>
-          <Text style={[styles.dayText, { color: colors.subtitle }]}>
-            {item.day}
-          </Text>
-          <Text style={[styles.dayNumber, { color: colors.text }]}>
-            {item.date}
+        <View style={styles.daySubjectRow}>
+          <View style={[styles.dayIconContainer, { backgroundColor: item.iconColor + "18" }]}>
+            <item.icon size={16} color={item.iconColor} />
+          </View>
+          <Text style={[styles.daySubject, { color: colors.text }]} numberOfLines={2}>
+            {item.subject}
           </Text>
         </View>
-        <Text style={[styles.daySubject, { color: colors.text }]}>
-          {item.subject}
-        </Text>
+        <View style={styles.dayMetaRow}>
+          <Text style={[styles.dayMetaText, { color: colors.subtitle }]}>
+            {item.isToday ? "Hoy · " : ""}{item.completedBlocks} de {item.totalBlocks} temas
+          </Text>
+          <Text style={[styles.dayProgressText, { color: progressColor }]}>{item.progress}%</Text>
+        </View>
+        <View style={styles.dayProgressTrack}>
+          <View style={[styles.dayProgressFill, { width: `${item.progress}%`, backgroundColor: progressColor }]} />
+        </View>
       </View>
-      <View style={styles.progressContainer}>
-        <CircularProgress
-          percentage={item.progress}
-          size={40}
-          strokeWidth={4}
-          color={progressColor}
-          backgroundColor="#e2e8f0"
-          showLabel={false}
-        />
-      </View>
+      <ChevronRight size={18} color={item.isLibre ? colors.inputBorder : colors.subtitle} />
     </Pressable>
   );
 });
@@ -161,7 +165,19 @@ const DayCard = memo<DayCardProps>(function DayCard({ item, colors, onPress, isP
 function DashboardScreenComponent() {
   const { colors, darkMode, toggleDarkMode } = useTheme();
   const router = useRouter();
-  const { data: studentProgressData, isLoading: isStudentProgressLoading } = useStudentProgressQuery();
+  const {
+    data: studentProgressData,
+    isLoading: isStudentProgressQueryLoading,
+    isFetching: isStudentProgressFetching,
+    isError: isStudentProgressError,
+    refetch: refetchStudentProgress,
+  } = useStudentProgressQuery(undefined, {
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMountOrArgChange: true,
+  });
+  const isStudentProgressLoading = isStudentProgressQueryLoading;
+  const hasProgressRequestFailed = isStudentProgressError;
   const [pressedCard, setPressedCard] = useState<string | null>(null);
   const [logoutMutation] = useLogoutMutation();
 
@@ -171,12 +187,14 @@ function DashboardScreenComponent() {
       await logoutMutation({ token_fcm: fcmToken || '' }).unwrap();
       await AsyncStorage.removeItem('access_token');
       await AsyncStorage.removeItem('token_expiration');
+      await AsyncStorage.removeItem('remember_me');
       router.replace('/login');
     } catch (error) {
       console.error('Error logging out:', error);
       // Still clear tokens and navigate even if API call fails
       await AsyncStorage.removeItem('access_token');
       await AsyncStorage.removeItem('token_expiration');
+      await AsyncStorage.removeItem('remember_me');
       router.replace('/login');
     }
   };
@@ -229,8 +247,8 @@ function DashboardScreenComponent() {
   ], [colors.background]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView style={containerStyle} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
+      <ScrollView style={containerStyle} contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
         <DashboardHeader onLogout={handleLogout} />
 
         {/* CALENDARIO - Vertical List */}
@@ -306,7 +324,23 @@ function DashboardScreenComponent() {
 
           {isStudentProgressLoading ? (
             <View style={styles.loadingContainer}>
+              <ActivityIndicator color="#0284c7" />
               <Text style={[styles.loadingText, { color: colors.subtitle }]}>Cargando calendario...</Text>
+            </View>
+          ) : hasProgressRequestFailed ? (
+            <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.inputBorder }]}>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No pudimos cargar tu plan</Text>
+              <Text style={[styles.emptyText, { color: colors.subtitle }]}>Comprueba la conexión con el servidor e inténtalo nuevamente.</Text>
+              <Pressable
+                disabled={isStudentProgressFetching}
+                onPress={() => {
+                  void refetchStudentProgress();
+                }}
+                style={[styles.retryButton, isStudentProgressFetching && styles.retryButtonDisabled]}
+              >
+                {isStudentProgressFetching && <ActivityIndicator size="small" color="#ffffff" />}
+                <Text style={styles.retryButtonText}>{isStudentProgressFetching ? "Reintentando..." : "Volver a intentar"}</Text>
+              </Pressable>
             </View>
           ) : calendarData.length > 0 ? (
             <View style={styles.calendarList}>
@@ -315,6 +349,7 @@ function DashboardScreenComponent() {
                   key={index}
                   item={item}
                   colors={colors}
+                  darkMode={darkMode}
                   onPress={handleDayPress}
                   isPressed={pressedCard === item.date}
                 />
@@ -323,7 +358,7 @@ function DashboardScreenComponent() {
           ) : (
             <View style={styles.emptyContainer}>
               <Text style={[styles.emptyText, { color: colors.subtitle }]}>
-                No hay datos de calendario disponibles
+                No tienes un plan de estudios disponible
               </Text>
             </View>
           )}

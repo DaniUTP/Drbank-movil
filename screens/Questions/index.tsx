@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CommonModal from "../../common/Modal";
+import ThemeToggle from "../../common/ThemeToggle";
 import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
 
@@ -19,7 +20,6 @@ import { useMarkStudiedMutation } from "@/services/studentProgress/student-progr
 import { UpdateExamStatusRequestDTO } from "@/types/question/exam.dto";
 import { HistoryRequestDTO } from "@/types/question/history.dto";
 import { parseDistractorText } from "@/utils/distractorParser";
-import { decryptLaravel } from "@/utils/encryption";
 import {
     AlertTriangle,
     ArrowLeft,
@@ -29,6 +29,7 @@ import {
     ChevronRight,
     Clock,
     Flag,
+    Grid3X3,
     HelpCircle,
     Lightbulb
 } from "lucide-react-native";
@@ -49,7 +50,7 @@ interface Question {
 }
 
 export default function QuestionsScreen() {
-  const { colors } = useTheme();
+  const { colors, darkMode } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams();
 
@@ -62,10 +63,11 @@ export default function QuestionsScreen() {
   const years = (params.years as string) || "";
   const examMode = (params.examMode as string) || "Resultados al final";
   const questionCount = parseInt(params.questionCount as string) || 5;
-  const timeLimit = parseInt(params.timeLimit as string) || 30;
+  const fromCalendar = (params.fromCalendar as string) === "true";
+  const requestedTimeLimit = parseInt(params.timeLimit as string) || 30;
+  const timeLimit = fromCalendar ? 60 : requestedTimeLimit;
   const sourceKey = (params.sourceKey as string) || (params.source as string) || "";
   const themeUuid = (params.themeUuid as string) || "";
-  const fromCalendar = (params.fromCalendar as string) === "true";
 
   // Helper to map exam_type to 'simulation', 'by_year', or 'by_topic'
   const resolveExamTypeKey = (
@@ -94,15 +96,8 @@ export default function QuestionsScreen() {
 
   // Transform API questions
   const transformedQuestions = apiQuestions ? apiQuestions.map((q: any) => {
-    // 1. Obtener dato de respuesta correcta (descifrar sólo si no viene como texto plano)
-    let rawData = q.data;
-    if (typeof rawData === "string" && rawData.length > 20 && !rawData.startsWith("a") && !rawData.startsWith("b") && !rawData.startsWith("c") && !rawData.startsWith("d")) {
-      try {
-        rawData = decryptLaravel(rawData);
-      } catch (e) {
-        // En caso de fallo de descifrado, conservar rawData
-      }
-    }
+    // El backend entrega la respuesta correcta en texto plano.
+    const rawData = q.data;
     
     // 2. Mapear opciones (a, b, c, d) - filtrar opciones vacías
     const options = q.options
@@ -152,6 +147,8 @@ export default function QuestionsScreen() {
   const [showResults, setShowResults] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [showAbandonModal, setShowAbandonModal] = useState(false);
+  const [showQuestionNavigator, setShowQuestionNavigator] = useState(false);
+  const [questionNavigatorPage, setQuestionNavigatorPage] = useState(0);
   
   // States for immediate response mode
   const [pendingOption, setPendingOption] = useState<string | null>(null);
@@ -167,6 +164,13 @@ export default function QuestionsScreen() {
   ];
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Keep the countdown aligned with the effective exam configuration. This is
+  // especially important during development because Fast Refresh preserves the
+  // previous 30-minute state even after calendar exams change to 60 minutes.
+  useEffect(() => {
+    setTimeRemaining(timeLimit * 60);
+  }, [timeLimit]);
 
   const formatTime = (seconds: number) => {
     const totalMins = Math.floor(seconds / 60);
@@ -192,7 +196,17 @@ export default function QuestionsScreen() {
   };
 
   const currentQuestion = transformedQuestions[currentQuestionIndex];
+  useEffect(() => {
+    setActiveTab(currentQuestion?.explanation ? "fundamentacion" : "distractores");
+  }, [currentQuestion?.id, currentQuestion?.explanation]);
   const totalQuestions = Math.min(questionCount, transformedQuestions.length);
+  const questionsPerNavigatorPage = 20;
+  const questionNavigatorPageCount = Math.max(1, Math.ceil(totalQuestions / questionsPerNavigatorPage));
+  const navigatorPageStart = questionNavigatorPage * questionsPerNavigatorPage;
+  const navigatorQuestions = transformedQuestions.slice(
+    navigatorPageStart,
+    Math.min(navigatorPageStart + questionsPerNavigatorPage, totalQuestions)
+  );
 
   const handleSelectAnswer = (optionId: string) => {
     if (isFinished) return;
@@ -462,12 +476,22 @@ export default function QuestionsScreen() {
     const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
 
     return (
-      <View style={styles.questionContainer}>
+      <View style={[styles.questionContainer, { backgroundColor: colors.card, borderColor: colors.inputBorder, marginTop: darkMode ? 12 : 20 }]}>
         <View style={styles.questionHeader}>
-          <Text style={[styles.questionNumber, { color: colors.subtitle }]}>
-            Pregunta {currentQuestionIndex + 1} de {totalQuestions}
-          </Text>
-          <View style={styles.progressBar}>
+          <View style={styles.questionHeaderRow}>
+            <Text style={[styles.questionNumber, { color: colors.subtitle }]}>Pregunta {currentQuestionIndex + 1} de {totalQuestions}</Text>
+            <Pressable
+              onPress={() => {
+                setQuestionNavigatorPage(Math.floor(currentQuestionIndex / questionsPerNavigatorPage));
+                setShowQuestionNavigator(true);
+              }}
+              style={[styles.navigatorTrigger, { backgroundColor: darkMode ? "#1e293b" : "#f1f5f9" }]}
+            >
+              <Grid3X3 size={15} color="#0284c7" />
+              <Text style={styles.navigatorTriggerText}>Ver preguntas</Text>
+            </Pressable>
+          </View>
+          <View style={[styles.progressBar, { backgroundColor: darkMode ? "#1e293b" : "#e2e8f0" }]}>
             <View style={[styles.progressFill, { width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%`, backgroundColor: "#0284c7" }]} />
           </View>
         </View>
@@ -481,18 +505,18 @@ export default function QuestionsScreen() {
             const isCorrectOption = currentQuestion.correctAnswer && option.id === currentQuestion.correctAnswer;
             const showFeedback = !isSubmitting && (examMode === "Respuesta inmediata" && !!immediateAnswers[currentQuestion.id]);
 
-            let optionStyle: any[] = [styles.option];
+            let optionStyle: any[] = [styles.option, { backgroundColor: darkMode ? "#111c2f" : "#ffffff", borderColor: colors.inputBorder }];
             let optionTextStyle = [styles.optionText, { color: colors.text }];
 
             if (isSelected || isPending) {
-              optionStyle = [styles.option, styles.optionSelected];
+              optionStyle = [styles.option, styles.optionSelected, darkMode && { backgroundColor: "#0c4a6e", borderColor: "#38bdf8" }];
             }
 
             if (showFeedback) {
               if (isCorrectOption) {
-                optionStyle = [styles.option, styles.optionCorrect];
+                optionStyle = [styles.option, styles.optionCorrect, darkMode && { backgroundColor: "#14532d", borderColor: "#22c55e" }];
               } else if (isSelected) {
-                optionStyle = [styles.option, styles.optionIncorrect];
+                optionStyle = [styles.option, styles.optionIncorrect, darkMode && { backgroundColor: "#450a0a", borderColor: "#ef4444" }];
               }
             }
 
@@ -501,6 +525,7 @@ export default function QuestionsScreen() {
                 <View style={styles.optionContent}>
                   <View style={[
                     styles.optionLetter, 
+                    { backgroundColor: darkMode ? "#1e293b" : "#f1f5f9" },
                     (isSelected || isPending) && styles.optionLetterSelected,
                     showFeedback && isCorrectOption && styles.optionLetterCorrect,
                     showFeedback && isSelected && !isCorrectOption && styles.optionLetterIncorrect
@@ -518,8 +543,8 @@ export default function QuestionsScreen() {
 
         {(!isSubmitting && examMode === "Respuesta inmediata" && immediateAnswers[currentQuestion.id]) && (
           <View style={styles.feedbackSection}>
-            <View style={[styles.feedbackContainer, { backgroundColor: isCorrect ? "#dcfce7" : "#fee2e2" }]}>
-              <Text style={[styles.feedbackText, { color: isCorrect ? "#166534" : "#991b1b" }]}>
+            <View style={[styles.feedbackContainer, { backgroundColor: darkMode ? (isCorrect ? "#14532d" : "#450a0a") : (isCorrect ? "#dcfce7" : "#fee2e2") }]}>
+              <Text style={[styles.feedbackText, { color: darkMode ? "#ffffff" : (isCorrect ? "#166534" : "#991b1b") }]}>
                 {isCorrect ? "¡Correcto!" : "Incorrecto"}
               </Text>
             </View>
@@ -530,7 +555,7 @@ export default function QuestionsScreen() {
               if (tab.id === 'distractores') return currentQuestion.distractorAnalysis;
               return false;
             }).length > 1 && (
-              <View style={styles.feedbackTabsContainer}>
+              <View style={[styles.feedbackTabsContainer, darkMode && { backgroundColor: "#1e293b" }]}>
                 {feedbackTabs
                   .filter(tab => (tab.id === 'fundamentacion' ? currentQuestion.explanation : currentQuestion.distractorAnalysis))
                   .map(tab => {
@@ -538,7 +563,7 @@ export default function QuestionsScreen() {
                     return (
                       <Pressable
                         key={tab.id}
-                        style={[styles.feedbackTabItem, isActive && styles.feedbackTabItemActive]}
+                        style={[styles.feedbackTabItem, isActive && styles.feedbackTabItemActive, darkMode && isActive && { backgroundColor: "#164e63" }]}
                         onPress={() => setActiveTab(tab.id)}
                       >
                         {tab.id === 'fundamentacion' ? (
@@ -546,7 +571,7 @@ export default function QuestionsScreen() {
                         ) : (
                           <HelpCircle size={16} color={isActive ? '#ea580c' : '#64748b'} />
                         )}
-                        <Text style={[styles.feedbackTabText, isActive && styles.feedbackTabTextActive]}>
+                        <Text style={[styles.feedbackTabText, isActive && styles.feedbackTabTextActive, { color: isActive ? colors.text : colors.subtitle }]}>
                           {tab.label}
                         </Text>
                       </Pressable>
@@ -557,25 +582,25 @@ export default function QuestionsScreen() {
 
             {activeTab === 'fundamentacion' && currentQuestion.explanation && (
               <View>
-                <View style={styles.explanationImmediate}>
+                <View style={[styles.explanationImmediate, darkMode && { backgroundColor: "#111c2f", borderColor: colors.inputBorder, borderLeftColor: "#0284c7" }]}>
                   <View style={styles.explanationHeader}>
                     <View style={styles.explanationHeaderLeft}>
-                      <View style={styles.explanationIconBadge}>
+                      <View style={[styles.explanationIconBadge, darkMode && { backgroundColor: "#164e63" }]}>
                         <Lightbulb size={18} color="#0284c7" />
                       </View>
-                      <Text style={styles.explanationTitle}>Fundamentación</Text>
+                      <Text style={[styles.explanationTitle, { color: colors.text }]}>Fundamentación</Text>
                     </View>
                   </View>
-                  <Text style={styles.explanationText}>{currentQuestion.explanation}</Text>
+                  <Text style={[styles.explanationText, { color: colors.text }]}>{currentQuestion.explanation}</Text>
                 </View>
 
                 {currentQuestion.reference && (
-                  <View style={styles.referenceImmediate}>
+                  <View style={[styles.referenceImmediate, darkMode && { backgroundColor: "#1e1b3b", borderColor: "#493b70", borderLeftColor: "#a78bfa" }]}>
                     <View style={styles.referenceHeader}>
                       <BookOpen size={15} color="#6d28d9" />
-                      <Text style={styles.referenceTitle}>Fuente Bibliográfica</Text>
+                      <Text style={[styles.referenceTitle, darkMode && { color: "#c4b5fd" }]}>Fuente Bibliográfica</Text>
                     </View>
-                    <Text style={styles.referenceText}>{currentQuestion.reference}</Text>
+                    <Text style={[styles.referenceText, { color: colors.subtitle }]}>{currentQuestion.reference}</Text>
                   </View>
                 )}
               </View>
@@ -585,10 +610,10 @@ export default function QuestionsScreen() {
               <View style={styles.distractorImmediate}>
                 <View style={styles.distractorHeader}>
                   <View style={styles.distractorHeaderLeft}>
-                    <View style={styles.distractorIconBadge}>
+                    <View style={[styles.distractorIconBadge, darkMode && { backgroundColor: "#7c2d12" }]}>
                       <HelpCircle size={18} color="#ea580c" />
                     </View>
-                    <Text style={styles.distractorTitle}>Análisis de Distractores</Text>
+                    <Text style={[styles.distractorTitle, { color: colors.text }]}>Análisis de Distractores</Text>
                   </View>
                 </View>
 
@@ -598,24 +623,22 @@ export default function QuestionsScreen() {
                     return (
                       <View style={styles.distractorList}>
                         {items.map((item, idx) => (
-                          <View key={idx} style={styles.distractorItemCard}>
+                          <View key={idx} style={[styles.distractorItemCard, darkMode && { backgroundColor: "#111c2f", borderColor: colors.inputBorder, borderLeftColor: "#fb923c" }]}>
                             <View style={styles.distractorItemHeader}>
                               {item.letter ? (
-                                <View style={styles.distractorItemBadge}>
+                                <View style={[styles.distractorItemBadge, darkMode && { backgroundColor: "#7c2d12" }]}>
                                   <Text style={styles.distractorItemBadgeText}>{item.letter}</Text>
                                 </View>
                               ) : null}
-                              {item.label ? (
-                                <Text style={styles.distractorItemLabel}>{item.label}</Text>
-                              ) : null}
+                              {item.label ? <Text style={[styles.distractorItemLabel, { color: colors.text }]}>{item.label}</Text> : null}
                             </View>
-                            <Text style={styles.distractorItemBody}>{item.text}</Text>
+                            <Text style={[styles.distractorItemBody, { color: colors.subtitle }]}>{item.text}</Text>
                           </View>
                         ))}
                       </View>
                     );
                   }
-                  return <Text style={styles.distractorText}>{currentQuestion.distractorAnalysis}</Text>;
+                  return <Text style={[styles.distractorText, { color: colors.text }]}>{currentQuestion.distractorAnalysis}</Text>;
                 })()}
               </View>
             )}
@@ -628,16 +651,19 @@ export default function QuestionsScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomWidth: darkMode ? 0 : 1, borderBottomColor: colors.inputBorder }]}>
         <Pressable onPress={handlePressBack} style={styles.backButton}>
           <ArrowLeft size={24} color={colors.text} />
         </Pressable>
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>{examType}</Text>
         </View>
-        <View style={[styles.timerContainer, { backgroundColor: getTimeBackgroundColor() }]}>
-          <Clock size={18} color={getTimeColor()} />
-          <Text style={[styles.timerText, { color: getTimeColor() }]}>{formatTime(timeRemaining)}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={[styles.timerContainer, { backgroundColor: getTimeBackgroundColor() }]}>
+            <Clock size={18} color={getTimeColor()} />
+            <Text style={[styles.timerText, { color: getTimeColor() }]}>{formatTime(timeRemaining)}</Text>
+          </View>
+          <ThemeToggle />
         </View>
       </View>
 
@@ -648,7 +674,7 @@ export default function QuestionsScreen() {
           {renderQuestion()}
 
           <View style={styles.navigationContainer}>
-            <Pressable style={[styles.navButton, styles.navButtonSecondary, currentQuestionIndex === 0 && styles.navButtonDisabled]} onPress={goToPreviousQuestion} disabled={currentQuestionIndex === 0}>
+            <Pressable style={[styles.navButton, styles.navButtonSecondary, { backgroundColor: colors.card, borderColor: colors.inputBorder }, currentQuestionIndex === 0 && styles.navButtonDisabled]} onPress={goToPreviousQuestion} disabled={currentQuestionIndex === 0}>
               <ChevronLeft size={20} color={currentQuestionIndex === 0 ? "#94a3b8" : "#0284c7"} />
               <Text style={[styles.navButtonTextSecondary, { color: currentQuestionIndex === 0 ? "#94a3b8" : "#0284c7" }]}>Anterior</Text>
             </Pressable>
@@ -670,6 +696,81 @@ export default function QuestionsScreen() {
       )}
 
       {/* Modales */}
+      <Modal visible={showQuestionNavigator} transparent animationType="fade" onRequestClose={() => setShowQuestionNavigator(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.questionNavigatorModal, { backgroundColor: colors.card }]}>
+            <View style={styles.questionNavigatorHeader}>
+              <View style={styles.questionNavigatorHeading}>
+                <Text style={[styles.questionNavigatorTitle, { color: colors.text }]}>Navegar por preguntas</Text>
+                <Text style={[styles.questionNavigatorSubtitle, { color: colors.subtitle }]}>Selecciona una pregunta para ir directamente.</Text>
+              </View>
+              <Pressable onPress={() => setShowQuestionNavigator(false)} style={[styles.questionNavigatorClose, { backgroundColor: colors.themeButton }]}>
+                <Text style={[styles.questionNavigatorCloseText, { color: colors.text }]}>×</Text>
+              </Pressable>
+            </View>
+            <View style={styles.questionNavigatorLegend}>
+              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: "#0284c7" }]} /><Text style={[styles.legendText, { color: colors.subtitle }]}>Actual</Text></View>
+              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: "#16a34a" }]} /><Text style={[styles.legendText, { color: colors.subtitle }]}>Respondida</Text></View>
+              <View style={styles.legendItem}>
+                <View
+                  style={[
+                    styles.legendDot,
+                    styles.legendDotPending,
+                    { backgroundColor: darkMode ? "#334155" : "#e2e8f0", borderColor: darkMode ? "#64748b" : "#94a3b8" },
+                  ]}
+                />
+                <Text style={[styles.legendText, { color: colors.subtitle }]}>Pendiente</Text>
+              </View>
+            </View>
+            <View style={styles.questionNavigatorRangeRow}>
+              <Text style={[styles.questionNavigatorRange, { color: colors.text }]}>Preguntas {navigatorPageStart + 1}–{Math.min(navigatorPageStart + questionsPerNavigatorPage, totalQuestions)}</Text>
+              <Text style={[styles.questionNavigatorPage, { color: colors.subtitle }]}>Página {questionNavigatorPage + 1} de {questionNavigatorPageCount}</Text>
+            </View>
+            <View style={styles.questionNavigatorGrid}>
+              {navigatorQuestions.map((question: Question, pageIndex: number) => {
+                const index = navigatorPageStart + pageIndex;
+                const isCurrent = index === currentQuestionIndex;
+                const isAnswered = Boolean(selectedAnswers[question.id]);
+                return (
+                  <Pressable
+                    key={question.id}
+                    onPress={() => { setCurrentQuestionIndex(index); setShowQuestionNavigator(false); }}
+                    style={[
+                      styles.questionNavigatorItem,
+                      { backgroundColor: colors.themeButton, borderColor: colors.inputBorder },
+                      isAnswered && styles.questionNavigatorItemAnswered,
+                      isCurrent && styles.questionNavigatorItemCurrent,
+                    ]}
+                  >
+                    <Text style={[styles.questionNavigatorItemText, { color: colors.text }, (isAnswered || isCurrent) && styles.questionNavigatorItemTextActive]}>{index + 1}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {questionNavigatorPageCount > 1 && (
+              <View style={styles.questionNavigatorPagination}>
+                <Pressable
+                  disabled={questionNavigatorPage === 0}
+                  onPress={() => setQuestionNavigatorPage(page => page - 1)}
+                  style={[styles.questionNavigatorPageButton, { borderColor: colors.inputBorder }, questionNavigatorPage === 0 && styles.questionNavigatorPageButtonDisabled]}
+                >
+                  <ChevronLeft size={18} color={questionNavigatorPage === 0 ? colors.subtitle : "#0284c7"} />
+                  <Text style={[styles.questionNavigatorPageButtonText, { color: questionNavigatorPage === 0 ? colors.subtitle : "#0284c7" }]}>Anteriores</Text>
+                </Pressable>
+                <Pressable
+                  disabled={questionNavigatorPage >= questionNavigatorPageCount - 1}
+                  onPress={() => setQuestionNavigatorPage(page => page + 1)}
+                  style={[styles.questionNavigatorPageButton, { borderColor: colors.inputBorder }, questionNavigatorPage >= questionNavigatorPageCount - 1 && styles.questionNavigatorPageButtonDisabled]}
+                >
+                  <Text style={[styles.questionNavigatorPageButtonText, { color: questionNavigatorPage >= questionNavigatorPageCount - 1 ? colors.subtitle : "#0284c7" }]}>Siguientes</Text>
+                  <ChevronRight size={18} color={questionNavigatorPage >= questionNavigatorPageCount - 1 ? colors.subtitle : "#0284c7"} />
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={showImmediateConfirm} transparent animationType="fade" onRequestClose={cancelImmediateAnswer}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: "white" }]}>

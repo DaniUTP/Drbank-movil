@@ -8,7 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { styles } from "./styles";
 
 export default function SimulacreScreen() {
- const { colors } = useTheme();
+ const { colors, darkMode } = useTheme();
  const router = useRouter();
  const [pressedCard, setPressedCard] = useState<string | null>(null);
 
@@ -25,8 +25,8 @@ export default function SimulacreScreen() {
         <Pressable 
           style={[
             styles.optionCard, 
-            { backgroundColor: colors.card },
-            pressedCard === 'generator' && styles.optionCardPressed
+            { backgroundColor: colors.card, borderColor: colors.inputBorder },
+            pressedCard === 'generator' && [styles.optionCardPressed, { backgroundColor: darkMode ? '#075985' : '#f0f9ff' }]
           ]}
           onPress={() => router.push("/simulacre-generator")}
           onPressIn={() => setPressedCard('generator')}
@@ -46,8 +46,8 @@ export default function SimulacreScreen() {
         <Pressable 
           style={[
             styles.optionCard, 
-            { backgroundColor: colors.card },
-            pressedCard === 'year' && styles.optionCardPressed
+            { backgroundColor: colors.card, borderColor: colors.inputBorder },
+            pressedCard === 'year' && [styles.optionCardPressed, { backgroundColor: darkMode ? '#075985' : '#f0f9ff' }]
           ]}
           onPress={()=>router.push("/simulacre-by-year")}
           onPressIn={() => setPressedCard('year')}
@@ -67,8 +67,8 @@ export default function SimulacreScreen() {
         <Pressable 
           style={[
             styles.optionCard, 
-            { backgroundColor: colors.card },
-            pressedCard === 'theme' && styles.optionCardPressed
+            { backgroundColor: colors.card, borderColor: colors.inputBorder },
+            pressedCard === 'theme' && [styles.optionCardPressed, { backgroundColor: darkMode ? '#075985' : '#f0f9ff' }]
           ]}
           onPress={()=>router.push("/simulacre-by-theme")}
           onPressIn={() => setPressedCard('theme')}

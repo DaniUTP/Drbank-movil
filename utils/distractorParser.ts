@@ -18,13 +18,11 @@ export function parseDistractorText(rawText: string): DistractorItem[] {
   const clean = rawText.trim();
   if (!clean) return [];
 
-  // Regex matches:
-  // (Start or newline or space)
-  // Optional "Opción "
-  // Letter [A-E]
-  // Optional parenthesized label "(100 ml/ cada hora)"
-  // Colon, period, or closing paren
-  const regex = /(?:^|\n+)\s*(?:Opción\s+)?([A-Ea-e])\s*(?:[\(\[](.*?)[\)\]])?\s*[:\.\)]\s*/g;
+  // The API may return all analyses in one paragraph, for example:
+  // "A) ... B) ... C) ... D) ...". Do not require a newline before a
+  // marker; a whitespace boundary is enough. Punctuation after the letter is
+  // mandatory so ordinary words beginning with A-E are never split.
+  const regex = /(?:^|\s+)(?:Opción\s+)?([A-Ea-e])\s*(?:[\(\[]([^\)\]]*?)[\)\]])?\s*[:\.\)]\s*/g;
 
   const matches = [...clean.matchAll(regex)];
 

@@ -1,16 +1,15 @@
 import { useTheme } from "@/common/ThemeContext";
 import { useRouter } from "expo-router";
-import { Brain, Calendar, Headphones, X } from "lucide-react-native";
+import { Brain, Calendar, Headphones, HeartPulse, X } from "lucide-react-native";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function AddScreen() {
-  const { colors } = useTheme();
+  const { colors, darkMode } = useTheme();
   const router = useRouter();
 
   const handleOptionPress = (option: string) => {
     switch (option) {
       case "support":
-        // Navigate to support screen
         router.push("/support");
         break;
       case "calendar":
@@ -18,6 +17,9 @@ export default function AddScreen() {
         break;
       case "download":
         router.push("/download-exams");
+        break;
+      case "medical-assistance":
+        router.push("/request-medical-assistance");
         break;
     }
   };
@@ -40,16 +42,16 @@ export default function AddScreen() {
             </View>
 
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-              <View style={styles.drbankitoLabel}>
-                <Text style={styles.drbankitoLabelText}>DRBANKITO</Text>
+              <View style={[styles.drbankitoLabel, darkMode && { backgroundColor: "#164e63" }]}>
+                <Text style={[styles.drbankitoLabelText, darkMode && { color: "#e0f2fe" }]}>DRBANKITO</Text>
               </View>
 
               <TouchableOpacity
-              style={[styles.option, { backgroundColor: colors.background }]}
+              style={[styles.option, { backgroundColor: darkMode ? "#102b28" : colors.background, borderColor: colors.inputBorder }]}
               onPress={() => handleOptionPress("calendar")}
             >
-              <View style={[styles.iconContainer, { backgroundColor: "#dcfce7" }]}>
-                <Calendar size={24} color="#16a34a" />
+              <View style={[styles.iconContainer, { backgroundColor: darkMode ? "#14532d" : "#dcfce7" }]}>
+                <Calendar size={24} color={darkMode ? "#4ade80" : "#16a34a"} />
               </View>
               <View style={styles.optionTextContainer}>
                 <Text style={[styles.optionTitle, { color: colors.text }]}>
@@ -62,11 +64,11 @@ export default function AddScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.option, { backgroundColor: colors.background }]}
+              style={[styles.option, { backgroundColor: darkMode ? "#112b45" : colors.background, borderColor: colors.inputBorder }]}
               onPress={() => handleOptionPress("download")}
             >
-              <View style={[styles.iconContainer, { backgroundColor: "#dbeafe" }]}>
-                <Brain size={24} color="#0284c7" />
+              <View style={[styles.iconContainer, { backgroundColor: darkMode ? "#164e63" : "#dbeafe" }]}>
+                <Brain size={24} color={darkMode ? "#38bdf8" : "#0284c7"} />
               </View>
               <View style={styles.optionTextContainer}>
                 <Text style={[styles.optionTitle, { color: colors.text }]}>
@@ -79,11 +81,11 @@ export default function AddScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.option, { backgroundColor: colors.background }]}
+              style={[styles.option, { backgroundColor: darkMode ? "#342038" : colors.background, borderColor: colors.inputBorder }]}
               onPress={() => handleOptionPress("support")}
             >
-              <View style={[styles.iconContainer, { backgroundColor: "#fce7f3" }]}>
-                <Headphones size={24} color="#db2777" />
+              <View style={[styles.iconContainer, { backgroundColor: darkMode ? "#831843" : "#fce7f3" }]}>
+                <Headphones size={24} color={darkMode ? "#f472b6" : "#db2777"} />
               </View>
               <View style={styles.optionTextContainer}>
                 <Text style={[styles.optionTitle, { color: colors.text }]}>
@@ -91,6 +93,23 @@ export default function AddScreen() {
                 </Text>
                 <Text style={[styles.optionSubtitle, { color: colors.subtitle }]}>
                   Contacta con nuestro equipo de ayuda
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.option, { backgroundColor: darkMode ? "#392126" : colors.background, borderColor: colors.inputBorder }]}
+              onPress={() => handleOptionPress("medical-assistance")}
+            >
+              <View style={[styles.iconContainer, { backgroundColor: darkMode ? "#7f1d1d" : "#fee2e2" }]}>
+                <HeartPulse size={24} color={darkMode ? "#f87171" : "#dc2626"} />
+              </View>
+              <View style={styles.optionTextContainer}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>
+                  Solicitar asistencia médica
+                </Text>
+                <Text style={[styles.optionSubtitle, { color: colors.subtitle }]}>
+                  Solicita ayuda de nuestro equipo médico
                 </Text>
               </View>
             </TouchableOpacity>
@@ -149,6 +168,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 16,
     minHeight: 80,
+    borderWidth: 1,
   },
   iconContainer: {
     width: 56,

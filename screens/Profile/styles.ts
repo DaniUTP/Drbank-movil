@@ -17,7 +17,11 @@ export const styles = StyleSheet.create({
         fontWeight: "bold",
     },
     notification: {
-        padding: 8,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: "center",
+        justifyContent: "center",
     },
     container: {
         flex: 1,
@@ -181,16 +185,21 @@ export const styles = StyleSheet.create({
         height: 40,
     },
     // Modal styles
+    keyboardAvoidingView: {
+        flex: 1,
+    },
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        justifyContent: "flex-end",
+        backgroundColor: "rgba(0,0,0,0.3)",
+        justifyContent: "center",
+        alignItems: "center",
     },
     modalContent: {
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        padding: 20,
-        paddingBottom: 40,
+        width: "88%",
+        maxWidth: 420,
+        borderRadius: 24,
+        borderWidth: 1,
+        padding: 24,
     },
     modalHeader: {
         flexDirection: "row",

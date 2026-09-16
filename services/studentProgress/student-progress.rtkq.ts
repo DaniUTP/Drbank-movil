@@ -9,6 +9,8 @@ export const studentProgressSlice=api.injectEndpoints({
       query: () => ({
         method: 'GET',
         url: '/student/progress',
+        params: { lang: 'es' },
+        timeout: 15000,
       }),
     }),
     markStudied: builder.mutation<MarkStudiedResponseDTO, MarkStudiedRequestDTO>({

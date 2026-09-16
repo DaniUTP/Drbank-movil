@@ -7,12 +7,10 @@ import React, { useCallback, useRef, useState } from "react";
 import {
   Keyboard,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import InputField from "../../common/InputField";
 import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
@@ -84,13 +82,8 @@ export function LoginScreen() {
       }).unwrap();
 
       await AsyncStorage.setItem('access_token', result.access_token);
-
-      // Only set token expiration if rememberMe is checked
-      if (rememberMe) {
-        const expirationDate = new Date();
-        expirationDate.setDate(expirationDate.getDate() + 7);
-        await AsyncStorage.setItem('token_expiration', expirationDate.toISOString());
-      }
+      await AsyncStorage.setItem('remember_me', rememberMe ? 'true' : 'false');
+      await AsyncStorage.removeItem('token_expiration');
 
       router.replace("/dashboard");
     } catch (error: any) {
@@ -118,12 +111,7 @@ export function LoginScreen() {
   }, [email, password, router, loginMutation, rememberMe]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView
-        contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+    <View style={{ backgroundColor: colors.card }}>
         <View style={styles.formContent}>
           <Text style={[styles.title, { color: colors.text }]}>
             Bienvenido a DrBank
@@ -201,8 +189,7 @@ export function LoginScreen() {
             </Text>
           </Pressable>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

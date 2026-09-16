@@ -3,10 +3,10 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   contentContainer: {
     flexGrow: 1,
-    paddingBottom: 16,
+    paddingBottom: 40,
   },
   formContent: {
-    flex: 1,
+    paddingBottom: 8,
   },
   title: {
     fontSize: 22,

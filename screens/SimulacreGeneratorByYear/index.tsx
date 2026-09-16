@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -12,8 +12,9 @@ import {
     TextInput,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../common/ThemeContext";
+import ThemeToggle from "../../common/ThemeToggle";
 import { styles } from "./styles";
 
 import {
@@ -31,12 +32,16 @@ import { useExamMutation } from "../../services/question/exam.rtkq";
 import { useLazyQuestionByYearQuery } from "../../services/question/question.rtkq";
 import { useExamTypeQuery } from "../../services/question/exam-type.rtkq";
 import { useYearQuery } from "../../services/question/year.rtkq";
-import { decryptLaravel } from "../../utils/encryption";
 
 export default function SimulacreGeneratorByYearScreen() {
+  const insets = useSafeAreaInsets();
   const { colors, darkMode, toggleDarkMode } = useTheme();
   const [createExam] = useExamMutation();
-  const [fetchQuestionsByYear, { isLoading: isLoadingQuestions }] = useLazyQuestionByYearQuery();
+  const [fetchQuestionsByYear] = useLazyQuestionByYearQuery();
+  const [isCreatingExam, setIsCreatingExam] = useState(false);
+  useFocusEffect(useCallback(() => {
+    setIsCreatingExam(false);
+  }, []));
   const { data: examTypesData = [], isLoading: examTypesLoading } = useExamTypeQuery();
   const { data: yearsData = [], isLoading: yearsLoading } = useYearQuery();
   const router = useRouter();
@@ -148,7 +153,12 @@ export default function SimulacreGeneratorByYearScreen() {
         style={[
           styles.examModeItem,
           isSelected && styles.examModeItemSelected,
-          { borderColor: isSelected ? "#0284c7" : colors.subtitle }
+          {
+            borderColor: isSelected ? "#0284c7" : colors.inputBorder,
+            backgroundColor: isSelected
+              ? (darkMode ? "#164e63" : "#f0f9ff")
+              : colors.card,
+          }
         ]}
         onPress={() => selectExamMode(item)}
       >
@@ -163,7 +173,7 @@ export default function SimulacreGeneratorByYearScreen() {
               <Text style={[styles.examModeItemTitle, { color: colors.text }]}>
                 {item.name}
               </Text>
-              <Text style={[styles.examModeItemDescription, { color: colors.subtitle }]}>
+              <Text style={[styles.examModeItemDescription, { color: darkMode && isSelected ? "#e2e8f0" : colors.subtitle }]}>
                 {item.description}
               </Text>
             </View>
@@ -178,7 +188,7 @@ export default function SimulacreGeneratorByYearScreen() {
           {item.details.map((detail, index) => (
             <View key={index} style={styles.examModeDetailRow}>
               <View style={[styles.detailDot, { backgroundColor: isSelected ? "#0284c7" : colors.subtitle }]} />
-              <Text style={[styles.examModeDetailText, { color: colors.subtitle }]}>
+              <Text style={[styles.examModeDetailText, { color: darkMode && isSelected ? "#e2e8f0" : colors.subtitle }]}>
                 {detail}
               </Text>
             </View>
@@ -198,13 +208,7 @@ export default function SimulacreGeneratorByYearScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           Generador
         </Text>
-        <Pressable onPress={toggleDarkMode} style={styles.notification}>
-          {darkMode ? (
-            <Sun size={22} color={colors.text} />
-          ) : (
-            <Moon size={22} color={colors.text} />
-          )}
-        </Pressable>
+        <ThemeToggle />
       </View>
 
       <KeyboardAvoidingView
@@ -321,7 +325,7 @@ export default function SimulacreGeneratorByYearScreen() {
             onRequestClose={() => setShowExamTypeModal(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background, marginBottom: insets.bottom }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
                     Tipo de Examen
@@ -369,7 +373,7 @@ export default function SimulacreGeneratorByYearScreen() {
             onRequestClose={() => setShowYearModal(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background, marginBottom: insets.bottom }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
                     Seleccionar Año
@@ -417,7 +421,7 @@ export default function SimulacreGeneratorByYearScreen() {
             onRequestClose={() => setShowExamModeModal(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background, marginBottom: insets.bottom }]}>
                 <View style={styles.modalHeader}>
                   <View>
                     <Text style={[styles.modalTitle, { color: colors.text }]}>
@@ -478,6 +482,7 @@ export default function SimulacreGeneratorByYearScreen() {
               { backgroundColor: examType && selectedYear && examMode ? "#0284c7" : "#94a3b8" }
             ]}
             onPress={async () => {
+              setIsCreatingExam(true);
               try {
                 // 1. Fetch questions from /quiz/by-year
                 const result = await fetchQuestionsByYear({
@@ -485,14 +490,7 @@ export default function SimulacreGeneratorByYearScreen() {
                   exam: examType,
                 }).unwrap();
 
-                // 2. Decrypt encrypted fields
-                const decryptedQuestions = result.map((question: any) => ({
-                  ...question,
-                  data: decryptLaravel(question.data),
-                  justification: question.justification ? decryptLaravel(question.justification) : '',
-                  distractorAnalysis: question.distractorAnalysis ? decryptLaravel(question.distractorAnalysis) : '',
-                  reference: question.reference ? decryptLaravel(question.reference) : '',
-                }));
+                const questions = result;
 
                 // 3. Create exam record
                 let createdExamId = "";
@@ -501,7 +499,7 @@ export default function SimulacreGeneratorByYearScreen() {
                     exam_type: "by_year",
                     title: `Examen por año - ${examType}`,
                     description: `Año ${selectedYear}`,
-                    total_questions: decryptedQuestions.length,
+                    total_questions: questions.length,
                     started_at: new Date().toISOString(),
                   }).unwrap();
                   createdExamId = examRes?.exam || "";
@@ -518,19 +516,21 @@ export default function SimulacreGeneratorByYearScreen() {
                     years: selectedYear,
                     examMode,
                     sourceKey: "by_year",
-                    questionCount: decryptedQuestions.length.toString(),
+                    questionCount: questions.length.toString(),
                     timeLimit: "200",
-                    questions: JSON.stringify(decryptedQuestions),
+                    questions: JSON.stringify(questions),
                   },
                 });
               } catch (error) {
                 console.error('Error fetching questions by year:', error);
+                setIsCreatingExam(false);
               }
             }}
-            disabled={!examType || !selectedYear || !examMode || isLoadingQuestions}
+            disabled={!examType || !selectedYear || !examMode || isCreatingExam}
           >
+            {isCreatingExam && <ActivityIndicator size="small" color="#ffffff" />}
             <Text style={styles.createButtonText}>
-              {isLoadingQuestions ? "Cargando..." : "Iniciar Examen"}
+              {isCreatingExam ? "Creando..." : "Iniciar Examen"}
             </Text>
           </Pressable>
 

@@ -29,6 +29,7 @@ export interface StudentProgressCalendarDTO {
 export interface StudentProgressTopicDTO {
   theme_uuid: string;
   theme: string;
+  video_url: string | null;
   ip_score: number;
   type: string;
   source: string;
