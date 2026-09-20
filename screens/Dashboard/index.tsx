@@ -2,11 +2,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import DashboardHeader from "../../common/DashboardHeader";
@@ -16,14 +16,14 @@ import { useLogoutMutation } from "../../services/auth/logout.rtkq";
 import { styles } from "./styles";
 
 import {
-    BookOpen,
-    Brain,
-    CalendarDays,
-    ChevronRight,
-    Heart,
-    LayoutGrid, LucideIcon,
-    Pill,
-    TrendingUp
+  BookOpen,
+  Brain,
+  CalendarDays,
+  ChevronRight,
+  Heart,
+  LayoutGrid, LucideIcon,
+  Pill,
+  TrendingUp
 } from "lucide-react-native";
 import { useStudentProgressQuery } from "../../services/studentProgress/student-progress.rtkq";
 
@@ -297,7 +297,7 @@ function DashboardScreenComponent() {
                     {
                       width: `${studyProgress.percentage}%`,
                       backgroundColor: studyProgress.percentage >= 70 ? "#22c55e" :
-                                     studyProgress.percentage >= 40 ? "#f59e0b" : "#ef4444"
+                        studyProgress.percentage >= 40 ? "#f59e0b" : "#ef4444"
                     }
                   ]}
                 />
@@ -316,7 +316,7 @@ function DashboardScreenComponent() {
           <View style={styles.calendarHeader}>
             <View style={styles.calendarTitleRow}>
               <CalendarDays size={18} color={colors.text} />
-              <Text style={[styles.calendarTitle,{color:colors.text}]}>
+              <Text style={[styles.calendarTitle, { color: colors.text }]}>
                 Calendario de Estudio
               </Text>
             </View>
@@ -329,17 +329,13 @@ function DashboardScreenComponent() {
             </View>
           ) : hasProgressRequestFailed ? (
             <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.inputBorder }]}>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>No pudimos cargar tu plan</Text>
-              <Text style={[styles.emptyText, { color: colors.subtitle }]}>Comprueba la conexión con el servidor e inténtalo nuevamente.</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>¡Bienvenido a Drbank!</Text>
+              <Text style={[styles.emptyText, { color: colors.subtitle }]}>Realiza tus simulacros para que cada lunes se arme un plan de estudio adaptado a ti.</Text>
               <Pressable
-                disabled={isStudentProgressFetching}
-                onPress={() => {
-                  void refetchStudentProgress();
-                }}
-                style={[styles.retryButton, isStudentProgressFetching && styles.retryButtonDisabled]}
+                onPress={() => router.push("/(dashboard)/simulacre")}
+                style={styles.retryButton}
               >
-                {isStudentProgressFetching && <ActivityIndicator size="small" color="#ffffff" />}
-                <Text style={styles.retryButtonText}>{isStudentProgressFetching ? "Reintentando..." : "Volver a intentar"}</Text>
+                <Text style={styles.retryButtonText}>Ir a simulacros</Text>
               </Pressable>
             </View>
           ) : calendarData.length > 0 ? (

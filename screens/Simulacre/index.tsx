@@ -1,7 +1,7 @@
 import DashboardHeader from "@/common/DashboardHeader";
 import { useTheme } from "@/common/ThemeContext";
 import { useRouter } from "expo-router";
-import { Calendar, LayoutGrid, Settings } from "lucide-react-native";
+import { Calendar, Settings } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -64,26 +64,6 @@ export default function SimulacreScreen() {
           </View>
         </Pressable>
 
-        <Pressable 
-          style={[
-            styles.optionCard, 
-            { backgroundColor: colors.card, borderColor: colors.inputBorder },
-            pressedCard === 'theme' && [styles.optionCardPressed, { backgroundColor: darkMode ? '#075985' : '#f0f9ff' }]
-          ]}
-          onPress={()=>router.push("/simulacre-by-theme")}
-          onPressIn={() => setPressedCard('theme')}
-          onPressOut={() => setPressedCard(null)}
-        >
-          <View style={[styles.iconContainer, { backgroundColor: "#fef3c7" }]}>
-            <LayoutGrid size={28} color="#d97706" />
-          </View>
-          <View style={styles.optionTextContainer}>
-            <Text style={[styles.optionTitle, { color: colors.text }]}>Por tema</Text>
-            <Text style={[styles.optionSubtitle, { color: colors.subtitle }]}>
-              Temas específicos
-            </Text>
-          </View>
-        </Pressable>
       </View>
     </SafeAreaView>
   );

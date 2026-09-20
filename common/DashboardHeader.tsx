@@ -19,6 +19,25 @@ const DashboardHeaderComponent = memo(function DashboardHeader({
 }: DashboardHeaderProps) {
   const { colors } = useTheme();
   const { data: profileData, isLoading } = useProfileQuery();
+  
+  const getGreeting = () => {
+    const peruHourString = new Intl.DateTimeFormat("es-PE", {
+      timeZone: "America/Lima",
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date());
+
+    const currentHour = parseInt(peruHourString, 10);
+    if (currentHour >= 6 && currentHour < 12) {
+      return "Buenos días,";
+    } else if (currentHour >= 12 && currentHour < 19) {
+      return "Buenas tardes,";
+    } else {
+      return "Buenas noches,";
+    }
+  };
+  
+  const greeting = getGreeting();
 
   // Use API data or fallback to defaults
   const userName = isLoading ? "Cargando..." : (profileData?.name && profileData?.last_name) 
@@ -53,7 +72,7 @@ const DashboardHeaderComponent = memo(function DashboardHeader({
           {title !== "hide" && (
             <>
               <Text style={greetingStyle}>
-                Buenos días,
+                {greeting}
               </Text>
 
               <Text style={usernameStyle}>

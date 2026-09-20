@@ -1,5 +1,5 @@
-import { Redirect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 
@@ -11,8 +11,25 @@ export default function Index() {
     Promise.all([
       AsyncStorage.getItem('remember_me'),
       AsyncStorage.getItem('access_token'),
-    ]).then(([rememberMe, token]) => {
-      if (active) setDestination(rememberMe === 'true' && !!token ? '/dashboard' : '/login');
+      AsyncStorage.getItem('token_expiration'),
+    ]).then(([rememberMe, token, tokenExpiration]) => {
+      if (!active) return;
+      
+      if (rememberMe === 'true' && !!token) {
+        if (tokenExpiration) {
+          const expirationDate = new Date(tokenExpiration);
+          const now = new Date();
+          if (now >= expirationDate) {
+            setDestination('/login');
+          } else {
+            setDestination('/dashboard');
+          }
+        } else {
+          setDestination('/login');
+        }
+      } else {
+        setDestination('/login');
+      }
     }).catch(() => {
       if (active) setDestination('/login');
     });

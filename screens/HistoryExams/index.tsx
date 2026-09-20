@@ -208,7 +208,7 @@ ExamCard.displayName = "ExamCard";
 // ============================================
 // MAIN SCREEN COMPONENT
 // ============================================
-type FilterType = "all" | "simulation" | "by_year" | "by_topic";
+type FilterType = "all" | "simulation" | "by_year";
 
 const PAGE_LIMIT = 10;
 
@@ -407,7 +407,6 @@ export default function HistoryExamsScreen() {
     { key: "all", label: "Todos" },
     { key: "simulation", label: "Simulacros" },
     { key: "by_year", label: "Por Año" },
-    { key: "by_topic", label: "Por Tema" },
   ];
 
   const handleFilterChange = (key: string) => {

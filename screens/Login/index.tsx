@@ -5,11 +5,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import {
-  Keyboard,
-  Pressable,
-  Text,
-  TextInput,
-  View,
+    Keyboard,
+    Pressable,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import InputField from "../../common/InputField";
 import { useTheme } from "../../common/ThemeContext";
@@ -83,7 +83,14 @@ export function LoginScreen() {
 
       await AsyncStorage.setItem('access_token', result.access_token);
       await AsyncStorage.setItem('remember_me', rememberMe ? 'true' : 'false');
-      await AsyncStorage.removeItem('token_expiration');
+      
+      if (rememberMe) {
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 7);
+        await AsyncStorage.setItem('token_expiration', expirationDate.toISOString());
+      } else {
+        await AsyncStorage.removeItem('token_expiration');
+      }
 
       router.replace("/dashboard");
     } catch (error: any) {

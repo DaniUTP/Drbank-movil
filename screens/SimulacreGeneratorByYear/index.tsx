@@ -43,13 +43,17 @@ export default function SimulacreGeneratorByYearScreen() {
     setIsCreatingExam(false);
   }, []));
   const { data: examTypesData = [], isLoading: examTypesLoading } = useExamTypeQuery();
-  const { data: yearsData = [], isLoading: yearsLoading } = useYearQuery();
   const router = useRouter();
 
   // Form state
   const [examType, setExamType] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
   const [examMode, setExamMode] = useState("");
+
+  const { data: yearsData = [], isLoading: yearsLoading } = useYearQuery(
+    { exam: examType },
+    { skip: !examType }
+  );
 
   // Modal states
   const [showExamTypeModal, setShowExamTypeModal] = useState(false);
@@ -106,6 +110,7 @@ export default function SimulacreGeneratorByYearScreen() {
 
   const selectExamType = (type: { id: string; name: string }) => {
     setExamType(type.name);
+    setSelectedYear("");
     setShowExamTypeModal(false);
     setExamTypeSearch("");
   };
@@ -268,37 +273,39 @@ export default function SimulacreGeneratorByYearScreen() {
             </View>
 
             {/* Año del Examen */}
-            <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: colors.subtitle }]}>
-                Año del examen <Text style={styles.required}>*</Text>
-              </Text>
-              <Pressable
-                style={[
-                  styles.selector,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.subtitle,
-                    opacity: yearsLoading ? 0.7 : 1,
-                  }
-                ]}
-                onPress={() => !yearsLoading && setShowYearModal(true)}
-                disabled={yearsLoading}
-              >
-                <Text style={[styles.selectorText, selectedYear ? { color: colors.text } : { color: colors.subtitle }]}>
-                  {yearsLoading ? "Cargando..." : (selectedYear || "Selecciona el año")}
+            {examType && (
+              <View style={styles.inputContainer}>
+                <Text style={[styles.label, { color: colors.subtitle }]}>
+                  Año del examen <Text style={styles.required}>*</Text>
                 </Text>
-                <ChevronDown size={20} color={colors.subtitle} />
-              </Pressable>
-              {selectedYear && (
                 <Pressable
-                  style={styles.clearButton}
-                  onPress={() => setSelectedYear("")}
+                  style={[
+                    styles.selector,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.subtitle,
+                      opacity: yearsLoading ? 0.7 : 1,
+                    }
+                  ]}
+                  onPress={() => !yearsLoading && setShowYearModal(true)}
+                  disabled={yearsLoading}
                 >
-                  <X size={16} color="#ef4444" />
-                  <Text style={styles.clearButtonText}>Limpiar</Text>
+                  <Text style={[styles.selectorText, selectedYear ? { color: colors.text } : { color: colors.subtitle }]}>
+                    {yearsLoading ? "Cargando..." : (selectedYear || "Selecciona el año")}
+                  </Text>
+                  <ChevronDown size={20} color={colors.subtitle} />
                 </Pressable>
-              )}
-            </View>
+                {selectedYear && (
+                  <Pressable
+                    style={styles.clearButton}
+                    onPress={() => setSelectedYear("")}
+                  >
+                    <X size={16} color="#ef4444" />
+                    <Text style={styles.clearButtonText}>Limpiar</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
 
             {/* Modo de Examen */}
             <View style={styles.inputContainer}>

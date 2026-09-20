@@ -60,7 +60,10 @@ export default function SimulacreGeneratorScreen() {
     { exam: examType },
     { skip: !examType }
   );
-  const { data: yearsData = [], isLoading: yearsLoading } = useYearQuery();
+  const { data: yearsData = [], isLoading: yearsLoading } = useYearQuery(
+    { exam: examType },
+    { skip: !examType }
+  );
 
   // Get specialties based on selected area
   const selectedAreaId = areasData.find((a: any) => a.name === area)?.id || 0;
@@ -156,6 +159,7 @@ export default function SimulacreGeneratorScreen() {
     setArea("");
     setSpecialty("");
     setTheme("");
+    setYears("");
     setShowExamTypeModal(false);
     setExamTypeSearch("");
   };
@@ -452,37 +456,39 @@ export default function SimulacreGeneratorScreen() {
             </View>
 
             {/* Años (Opcional) */}
-            <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: colors.subtitle }]}>
-                Años <Text style={styles.optional}>(Opcional)</Text>
-              </Text>
-              <Pressable
-                style={[
-                  styles.selector,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.subtitle,
-                    opacity: yearsLoading ? 0.7 : 1,
-                  }
-                ]}
-                onPress={() => !yearsLoading && setShowYearsModal(true)}
-                disabled={yearsLoading}
-              >
-                <Text style={[styles.selectorText, years ? { color: colors.text } : { color: colors.subtitle }]}>
-                  {yearsLoading ? "Cargando..." : (years || "Selecciona los años (varios)")}
+            {examType && (
+              <View style={styles.inputContainer}>
+                <Text style={[styles.label, { color: colors.subtitle }]}>
+                  Años <Text style={styles.optional}>(Opcional)</Text>
                 </Text>
-                <ChevronDown size={20} color={colors.subtitle} />
-              </Pressable>
-              {years && (
                 <Pressable
-                  style={styles.clearButton}
-                  onPress={() => setYears("")}
+                  style={[
+                    styles.selector,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.subtitle,
+                      opacity: yearsLoading ? 0.7 : 1,
+                    }
+                  ]}
+                  onPress={() => !yearsLoading && setShowYearsModal(true)}
+                  disabled={yearsLoading}
                 >
-                  <X size={16} color="#ef4444" />
-                  <Text style={styles.clearButtonText}>Limpiar</Text>
+                  <Text style={[styles.selectorText, years ? { color: colors.text } : { color: colors.subtitle }]}>
+                    {yearsLoading ? "Cargando..." : (years || "Selecciona los años (varios)")}
+                  </Text>
+                  <ChevronDown size={20} color={colors.subtitle} />
                 </Pressable>
-              )}
-            </View>
+                {years && (
+                  <Pressable
+                    style={styles.clearButton}
+                    onPress={() => setYears("")}
+                  >
+                    <X size={16} color="#ef4444" />
+                    <Text style={styles.clearButtonText}>Limpiar</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
 
             {/* Modo de Examen */}
             <View style={styles.inputContainer}>
