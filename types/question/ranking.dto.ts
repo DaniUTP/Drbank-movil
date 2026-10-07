@@ -4,3 +4,11 @@ export interface RankingResponseDTO{
     points:number;
     university:string;
 }
+
+export interface SaveRankingRequestDTO {
+    points: number;
+}
+
+export interface SaveRankingResponseDTO {
+    message?: string;
+}

@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import {
   ArrowLeft,
+  BookOpenCheck,
   Calendar,
   CheckCircle,
   ChevronLeft,
@@ -26,7 +27,8 @@ import ThemeToggle from "../../common/ThemeToggle";
 import { styles } from "./styles";
 
 import { useGetExamQuery } from "@/services/question/exam.rtkq";
-import { ExamHistoryItemDTO, ExamSummaryItem } from "@/types/question/exam.dto";
+import { useSmartReviewBlocksQuery } from "@/services/adaptiveReview/smart-review.rtkq";
+import { ExamHistoryItemDTO } from "@/types/question/exam.dto";
 
 // ============================================
 // TYPES
@@ -42,7 +44,6 @@ export interface FormattedExam {
   timeSpentSeconds: number;
   status?: string;
   startedAt?: string;
-  examSummary?: ExamSummaryItem[];
   recommendation?: string;
 }
 
@@ -91,6 +92,9 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors, isPressed
 
   const getTypeIcon = () => {
     const t = (exam.category || exam.type || "").toLowerCase();
+    if (exam.type.toLowerCase() === "smart review" || t.includes("repaso adaptativo")) {
+      return <BookOpenCheck size={24} color="#0284c7" />;
+    }
     if (t.includes("año") || t.includes("year")) {
       return <Calendar size={24} color="#06b6d4" />;
     }
@@ -102,6 +106,9 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors, isPressed
 
   const getTypeBgColor = () => {
     const t = (exam.category || exam.type || "").toLowerCase();
+    if (exam.type.toLowerCase() === "smart review" || t.includes("repaso adaptativo")) {
+      return "#0284c720";
+    }
     if (t.includes("año") || t.includes("year")) {
       return "#06b6d420";
     }
@@ -146,7 +153,6 @@ const ExamCard = memo<ExamCardProps>(function ExamCard({ exam, colors, isPressed
           examType: exam.type,
           specialty: exam.category,
           timeSpent: exam.timeSpentSeconds.toString(),
-          examSummary: JSON.stringify(exam.examSummary || []),
           recommendation: exam.recommendation || ""
         }
       })}
@@ -208,7 +214,7 @@ ExamCard.displayName = "ExamCard";
 // ============================================
 // MAIN SCREEN COMPONENT
 // ============================================
-type FilterType = "all" | "simulation" | "by_year";
+type FilterType = "all" | "simulation" | "by_year" | "smart review";
 
 const PAGE_LIMIT = 10;
 
@@ -237,7 +243,8 @@ export default function HistoryExamsScreen() {
     data: examDataRaw,
     isLoading,
     isFetching
-  } = useGetExamQuery(queryParams);
+  } = useGetExamQuery(queryParams, { refetchOnMountOrArgChange: true });
+  const { data: smartReviewBlocksData } = useSmartReviewBlocksQuery();
 
   // Extract raw exam list
   const rawList: ExamHistoryItemDTO[] = useMemo(() => {
@@ -247,6 +254,17 @@ export default function HistoryExamsScreen() {
     if (Array.isArray((examDataRaw as any).exams)) return (examDataRaw as any).exams;
     return [];
   }, [examDataRaw]);
+
+  const smartReviewPlanByExam = useMemo(() => {
+    const byBlockId = new Map<number, number>();
+    const blocks = [...(smartReviewBlocksData?.data?.blocks ?? [])]
+      .sort((first, second) => first.id_study_block - second.id_study_block);
+    blocks.forEach((block, index) => {
+      const planNumber = index + 1;
+      byBlockId.set(block.id_study_block, planNumber);
+    });
+    return { byBlockId };
+  }, [smartReviewBlocksData]);
 
   // Last page from pagination
   const lastPage = useMemo(() => {
@@ -312,33 +330,42 @@ export default function HistoryExamsScreen() {
       year: "numeric"
     });
   };
-  console.log("data:",rawList);
   // Convert raw items into formatted items
   const formattedExams: FormattedExam[] = useMemo(() => {
     return rawList.map((item, index) => {
-      const questions = Number(item.total_questions) || (Array.isArray(item.exam_summary) ? item.exam_summary.length : 0);
+      const questions = Number(item.total_questions) || 0;
       const score = Math.round(Number(item.score_percentage) || 0);
-      const correctAnswers = Array.isArray(item.exam_summary) && item.exam_summary.length > 0
-        ? item.exam_summary.filter(s => (s.correct_answer || '').toLowerCase() === (s.response || '').toLowerCase()).length
-        : Math.round((score / 100) * questions);
+      const correctAnswers = Math.round((score / 100) * questions);
       const timeSpentSeconds = Number(item.time_spent) || 0;
+      const titlePlanNumber = item.title?.match(/Plan de repaso\s+(\d+)/i)?.[1];
+      const planNumber = (item.id_study_block ? smartReviewPlanByExam.byBlockId.get(item.id_study_block) : undefined)
+        ?? (titlePlanNumber ? Number(titlePlanNumber) : undefined);
+      const stage = (item.smart_review_stage ?? item.stage)?.toLowerCase();
+      const rawTitle = item.title?.toLowerCase() ?? "";
+      const adaptiveTitle = stage === "pretest" || rawTitle.includes("evaluación inicial")
+        ? "Evaluación inicial"
+        : stage === "posttest" || rawTitle.includes("posttest")
+          ? "Posttest"
+          : stage === "review"
+            ? "Repaso adaptativo"
+            : item.title;
+      const category = planNumber ? `${adaptiveTitle} - Plan de repaso ${planNumber}` : item.title || "Simulacro Médico";
 
       return {
         id: (item.uuid || (item as any).id || (index + 1)).toString(),
         dateString: formatDateGroup(item.started_at || item.completed_at),
-        type: item.title?.toLowerCase().includes("año") ? "año" : item.title?.toLowerCase().includes("tema") ? "theme" : "simulacro",
-        category: item.title || "Simulacro Médico",
+        type: item.exam_type || (item.title?.toLowerCase().includes("año") ? "by_year" : item.title?.toLowerCase().includes("tema") ? "theme" : "simulation"),
+        category,
         score,
         questions,
         correctAnswers,
         timeSpentSeconds,
         status: item.status,
         startedAt: item.started_at,
-        examSummary: item.exam_summary,
         recommendation: (item as any).recommendation || ""
       };
     });
-  }, [rawList]);
+  }, [rawList, smartReviewPlanByExam]);
 
   // Filter by search query
   const filteredExams = useMemo(() => {
@@ -407,6 +434,7 @@ export default function HistoryExamsScreen() {
     { key: "all", label: "Todos" },
     { key: "simulation", label: "Simulacros" },
     { key: "by_year", label: "Por Año" },
+    { key: "smart review", label: "Repaso adaptativo" },
   ];
 
   const handleFilterChange = (key: string) => {

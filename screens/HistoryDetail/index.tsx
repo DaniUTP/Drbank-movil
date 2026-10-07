@@ -1,6 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-   AlertCircle,
    ArrowLeft,
    Award,
    CheckCircle2,
@@ -20,12 +19,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CircularProgressChart from "../../common/CircularProgressChart";
+import TopicPerformance from "../../common/TopicPerformance";
 import TabNavigation from "../../common/TabNavigation";
 import { useTheme } from "../../common/ThemeContext";
 import ThemeToggle from "../../common/ThemeToggle";
 import { styles } from "./styles";
 import { styles as feedbackStyles } from "../Questions/styles";
 import { parseDistractorText } from "@/utils/distractorParser";
+import type { ExamSummaryItem } from "@/types/question/exam.dto";
+import type { TopicPerformanceItem } from "../../common/TopicPerformance";
+import { useGetExamDetailQuery } from "@/services/question/exam.rtkq";
 
 
 
@@ -33,6 +36,9 @@ export default function HistoryDetailScreen() {
   const { colors, darkMode } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams();
+  const examUuid = Array.isArray(params.id) ? params.id[0] : params.id;
+  const { data: examDetailResponse, isLoading: examDetailLoading, isFetching: examDetailFetching } = useGetExamDetailQuery(examUuid ?? "", { skip: !examUuid });
+  const examDetail = examDetailResponse?.data;
 
   const [activeTab, setActiveTab] = useState<"summary" | "exams" | "analysis">("summary");
   const [feedbackTab, setFeedbackTab] = useState('fundamentacion');
@@ -43,30 +49,54 @@ export default function HistoryDetailScreen() {
   ];
 
   // Parse exam summary from params
-  const examSummary = useMemo(() => {
+  const examSummary = useMemo<ExamSummaryItem[]>(() => {
+    if (Array.isArray(examDetail?.exam_summary)) return examDetail.exam_summary;
     try {
       const summaryStr = params.examSummary as string;
       if (summaryStr) {
-        return JSON.parse(summaryStr);
+        const parsed = JSON.parse(summaryStr);
+        return Array.isArray(parsed) ? parsed : [];
       }
       return [];
-    } catch (e) {
+    } catch {
       return [];
     }
-  }, [params.examSummary]);
+  }, [examDetail?.exam_summary, params.examSummary]);
+
+  const topicPerformance = useMemo<TopicPerformanceItem[]>(() => {
+    try {
+      const performanceParam = params.topicPerformance;
+      const serialized = Array.isArray(performanceParam) ? performanceParam[0] : performanceParam;
+      if (serialized) {
+        const parsed = JSON.parse(serialized);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // Fall back to the full exam summary when the compact route value is invalid.
+    }
+
+    return examSummary.map(item => ({
+      topicId: item.id_theme,
+      topic: item.theme?.trim() || "Tema no especificado",
+      correct: Boolean(item.response)
+        && item.response.toLowerCase() === String(item.correct_answer ?? "").toLowerCase(),
+    }));
+  }, [examSummary, params.topicPerformance]);
 
   // Current exam data
   const selectedExam = useMemo(() => ({
     id: "current",
-    score: parseInt(params.percentage as string) || 0,
+    score: Math.round(Number(examDetail?.score_percentage ?? params.percentage) || 0),
     date: "Hoy (Actual)",
     category: params.specialty as string || "Medicina",
-    correct: parseInt(params.correct as string) || 0,
-    total: parseInt(params.total as string) || 0,
-    time: parseInt(params.timeSpent as string) || 0,
-    type: params.examType as string || "Simulacro",
-    recommendation: params.recommendation as string || ""
-  }), [params]);
+    correct: examDetail
+      ? examSummary.filter(item => Boolean(item.response) && item.response.toLowerCase() === String(item.correct_answer ?? "").toLowerCase()).length
+      : parseInt(params.correct as string) || 0,
+    total: Number(examDetail?.total_questions ?? params.total) || 0,
+    time: Number(examDetail?.time_spent ?? params.timeSpent) || 0,
+    type: examDetail?.exam_type || params.examType as string || "Simulacro",
+    recommendation: examDetail?.recommendation || params.recommendation as string || ""
+  }), [examDetail, examSummary, params]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -75,7 +105,7 @@ export default function HistoryDetailScreen() {
   };
 
   const renderSummary = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator>
       <View style={[styles.heroCard, { backgroundColor: colors.card }]}>
          <View style={styles.heroHeader}>
             <Award size={24} color="#f59e0b" />
@@ -108,6 +138,13 @@ export default function HistoryDetailScreen() {
          </View>
       </View>
 
+      <TopicPerformance
+        items={topicPerformance}
+        colors={colors}
+        darkMode={darkMode}
+        loading={Boolean(examUuid) && (examDetailLoading || (examDetailFetching && !examDetailResponse))}
+      />
+
       <View style={{ height: 100 }} />
     </ScrollView>
   );
@@ -122,13 +159,14 @@ export default function HistoryDetailScreen() {
                           item.correct_answer.toLowerCase() === item.response.toLowerCase();
           const isUnanswered = !item.response || item.response === null;
 
-          // Build options from alt_a, alt_b, alt_c, alt_d fields
+          // Build every non-empty option returned by the exam summary.
           const options = [
             { id: 'a', text: item.alt_a },
             { id: 'b', text: item.alt_b },
             { id: 'c', text: item.alt_c },
             { id: 'd', text: item.alt_d },
-          ].filter(opt => opt.text); // Filter out empty options
+            { id: 'e', text: item.alt_e },
+          ].filter(opt => typeof opt.text === "string" && opt.text.trim().length > 0);
 
           return (
             <View style={[styles.reviewCard, { backgroundColor: colors.card }]}>

@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/AppIcons/AppIcon.icon/Assets/icon.png",
-    "scheme": ["drbankmobile", "exp"],
+    "scheme": "drbankmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {

@@ -15,7 +15,8 @@ import { useTheme } from "../../common/ThemeContext";
 import { styles } from "./styles";
 
 import { useUpdateExamStatusMutation } from "@/services/question/exam.rtkq";
-import { useLazyHistoryQuery } from "@/services/question/history.rtkq";
+import { useHistoryMutation } from "@/services/question/history.rtkq";
+import { useSaveRankingMutation } from "@/services/question/ranking.rtkq";
 import { useMarkStudiedMutation } from "@/services/studentProgress/student-progress.rtkq";
 import { UpdateExamStatusRequestDTO } from "@/types/question/exam.dto";
 import { HistoryRequestDTO } from "@/types/question/history.dto";
@@ -123,6 +124,7 @@ export default function QuestionsScreen() {
     
     return {
       id: q.questionId.toString(),
+      theme: q.theme || theme || "Tema no especificado",
       question: q.question,
       options: options,
       correctAnswer: correctOption ? correctOption.id : (cleanData || ''), 
@@ -133,8 +135,9 @@ export default function QuestionsScreen() {
   }) : [];
 
   // RTK Query APIs for history & exam status
-  const [triggerHistory] = useLazyHistoryQuery();
+  const [triggerHistory] = useHistoryMutation();
   const [updateExamStatus] = useUpdateExamStatusMutation();
+  const [saveRanking] = useSaveRankingMutation();
   const [markStudied] = useMarkStudiedMutation();
   const startTimeRef = useRef<string>(new Date().toISOString());
 
@@ -164,12 +167,14 @@ export default function QuestionsScreen() {
   ];
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoSubmitStartedRef = useRef(false);
 
   // Keep the countdown aligned with the effective exam configuration. This is
   // especially important during development because Fast Refresh preserves the
   // previous 30-minute state even after calendar exams change to 60 minutes.
   useEffect(() => {
     setTimeRemaining(timeLimit * 60);
+    autoSubmitStartedRef.current = false;
   }, [timeLimit]);
 
   const formatTime = (seconds: number) => {
@@ -276,8 +281,8 @@ export default function QuestionsScreen() {
       completed_at: completedAt,
       exam_summary: activeQuestions.map((q: any) => ({
         question_id: parseInt(q.id, 10) || 0,
-        correct_answer: q.correctAnswer || "",
         response: selectedAnswers[q.id] || "",
+        difficulty: q.difficulty || "regular",
       })),
     };
 
@@ -358,16 +363,17 @@ export default function QuestionsScreen() {
       completed_at: completedAt,
       exam_summary: activeQuestions.map((q: any) => ({
         question_id: parseInt(q.id, 10) || 0,
-        correct_answer: q.correctAnswer || "",
         response: selectedAnswers[q.id] || "",
+        difficulty: q.difficulty || "regular",
       })),
     };
 
     try {
-      // Consume history query API (POST /quiz/history) & updateExamStatus mutation API (PATCH /quiz/exam/status)
+      // Registrar historial, estado del simulador y un punto por cada respuesta correcta.
       await Promise.allSettled([
         triggerHistory(historyPayload).unwrap(),
         updateExamStatus(updateExamPayload).unwrap(),
+        saveRanking({ points: results.correct }).unwrap(),
       ]);
       
       // Call markStudied API only if exam comes from calendar (fromCalendar === true)
@@ -405,26 +411,23 @@ export default function QuestionsScreen() {
         questions: JSON.stringify(activeQuestions),
       },
     });
-  }, [selectedAnswers, transformedQuestions, totalQuestions, timeLimit, timeRemaining, examId, triggerHistory, updateExamStatus, markStudied, themeUuid, fromCalendar, formattedExamType, examType, area, specialty, theme, years, examMode, questionCount, router]);
+  }, [selectedAnswers, transformedQuestions, totalQuestions, timeLimit, timeRemaining, examId, triggerHistory, updateExamStatus, saveRanking, markStudied, themeUuid, fromCalendar, formattedExamType, examType, area, specialty, theme, years, examMode, questionCount, router]);
 
   // Timer effect
   useEffect(() => {
     if (!isFinished && timeRemaining > 0) {
       timerRef.current = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            if (timerRef.current) clearInterval(timerRef.current);
-            setIsFinished(true);
-            // Auto-finish exam when time runs out
-            setTimeout(() => confirmFinishExam(), 100);
-            return 0;
-          }
-          return prev - 1;
-        });
+        setTimeRemaining((prev) => Math.max(0, prev - 1));
       }, 1000);
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [isFinished, timeRemaining, confirmFinishExam]);
+  }, [isFinished, timeRemaining]);
+
+  useEffect(() => {
+    if (timeRemaining > 0 || isFinished || autoSubmitStartedRef.current) return;
+    autoSubmitStartedRef.current = true;
+    void confirmFinishExam();
+  }, [confirmFinishExam, isFinished, timeRemaining]);
 
   const calculateResults = () => {
     let correct = 0;

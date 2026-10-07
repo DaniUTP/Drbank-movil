@@ -1,4 +1,5 @@
 export interface QuestionRequestDTO{
+    area?:number;
     specialty?:number;
     theme?:string;
     year?:string[];

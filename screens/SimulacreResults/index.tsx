@@ -1,4 +1,5 @@
 import { parseDistractorText } from "@/utils/distractorParser";
+import TopicPerformance from "@/common/TopicPerformance";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
@@ -161,27 +162,29 @@ function ReviewQuestionCard({ item, index, selectedAnswers }: { item: any; index
 
       {/* Rationale Section */}
       {currentTab === "fundamentacion" && explanation ? (
-        <View style={[styles.explanationBox, darkMode && { backgroundColor: "#111c2f", borderColor: colors.inputBorder, borderLeftColor: "#0284c7" }]}>
-           <View style={styles.explanationHeader}>
-              <View style={styles.explanationHeaderLeft}>
-                <View style={[styles.explanationIconBadge, darkMode && { backgroundColor: "#164e63" }]}>
-                  <Lightbulb size={18} color="#0284c7" />
+        <>
+          <View style={[styles.explanationBox, darkMode && { backgroundColor: "#111c2f", borderColor: colors.inputBorder, borderLeftColor: "#0284c7" }]}>
+             <View style={styles.explanationHeader}>
+                <View style={styles.explanationHeaderLeft}>
+                  <View style={[styles.explanationIconBadge, darkMode && { backgroundColor: "#164e63" }]}>
+                    <Lightbulb size={18} color="#0284c7" />
+                  </View>
+                  <Text style={[styles.explanationTitle, { color: colors.text }]}>Fundamentación</Text>
                 </View>
-                <Text style={[styles.explanationTitle, { color: colors.text }]}>Fundamentación</Text>
-              </View>
-           </View>
-           <Text style={[styles.explanationText, { color: colors.text }]}>{explanation}</Text>
-
-           {item.reference ? (
-             <View style={[styles.referenceBox, darkMode && { backgroundColor: "#1e1b3b", borderColor: "#493b70", borderLeftColor: "#a78bfa" }]}>
-                <View style={styles.referenceHeader}>
-                   <BookOpen size={15} color={darkMode ? "#c4b5fd" : "#6d28d9"} />
-                   <Text style={[styles.referenceTitle, darkMode && { color: "#c4b5fd" }]}>Fuente Bibliográfica</Text>
-                </View>
-                <Text style={[styles.referenceText, { color: colors.subtitle }]}>{item.reference}</Text>
              </View>
-           ) : null}
-        </View>
+             <Text style={[styles.explanationText, { color: colors.text }]}>{explanation}</Text>
+          </View>
+
+          {item.reference ? (
+            <View style={[styles.referenceBox, darkMode && { backgroundColor: "#1e1b3b", borderColor: "#493b70", borderLeftColor: "#a78bfa" }]}>
+               <View style={styles.referenceHeader}>
+                  <BookOpen size={15} color={darkMode ? "#c4b5fd" : "#6d28d9"} />
+                  <Text style={[styles.referenceTitle, darkMode && { color: "#c4b5fd" }]}>Fuente Bibliográfica</Text>
+               </View>
+               <Text style={[styles.referenceText, { color: colors.subtitle }]}>{item.reference}</Text>
+            </View>
+          ) : null}
+        </>
       ) : null}
 
       {/* Distractors Section */}
@@ -278,9 +281,14 @@ export default function SimulacreResultsScreen() {
   };
 
   const avgTimePerQuestion = total > 0 ? (timeSpent / total).toFixed(1) : "0";
+  const topicPerformance = Array.isArray(questions) ? questions.map((question: any) => ({
+    topicId: question.id_theme,
+    topic: question.theme || theme || "Tema no especificado",
+    correct: Boolean(selectedAnswers[question.id]) && selectedAnswers[question.id] === question.correctAnswer,
+  })) : [];
 
   const renderResultsTab = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator>
       {/* Main Score Card */}
       <View style={[styles.mainCard, { backgroundColor: colors.card }]}>
         <View style={styles.cardHeader}>
@@ -324,6 +332,8 @@ export default function SimulacreResultsScreen() {
            </View>
         </View>
       </View>
+
+      <TopicPerformance items={topicPerformance} colors={colors} darkMode={darkMode} />
 
       {/* Exam Summary Section */}
       <View style={styles.sectionHeader}>

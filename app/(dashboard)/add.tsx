@@ -106,7 +106,7 @@ export default function AddScreen() {
               </View>
               <View style={styles.optionTextContainer}>
                 <Text style={[styles.optionTitle, { color: colors.text }]}>
-                  Solicitar asistencia médica
+                  Solicitar asesoría médica
                 </Text>
                 <Text style={[styles.optionSubtitle, { color: colors.subtitle }]}>
                   Solicita ayuda de nuestro equipo médico

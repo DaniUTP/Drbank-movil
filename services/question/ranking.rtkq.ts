@@ -1,6 +1,6 @@
 import { api } from "@/store/api";
 import { TagTypes } from "@/store/constants/tagTypes.constants";
-import { RankingResponseDTO } from "@/types/question/ranking.dto";
+import { RankingResponseDTO, SaveRankingRequestDTO, SaveRankingResponseDTO } from "@/types/question/ranking.dto";
 
 export const rankingSlice=api.injectEndpoints({
     endpoints: builder => ({
@@ -10,7 +10,15 @@ export const rankingSlice=api.injectEndpoints({
                 url: '/quiz/ranking',
                 method: 'GET',
             }),
-        })
+        }),
+        saveRanking: builder.mutation<SaveRankingResponseDTO, SaveRankingRequestDTO>({
+            invalidatesTags: [TagTypes.Ranking],
+            query: (body) => ({
+                url: '/quiz/ranking',
+                method: 'POST',
+                body,
+            }),
+        }),
     })
 });
-export const {useRankingQuery,useLazyRankingQuery}=rankingSlice;
+export const {useRankingQuery,useLazyRankingQuery,useSaveRankingMutation}=rankingSlice;

@@ -5,6 +5,18 @@ import { envs } from '../../config/envs';
 const baseQuery = fetchBaseQuery({
   baseUrl: envs.API_BASE_URL,
   timeout: Number(envs.API_TIMEOUT),
+  paramsSerializer: (params) => {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') return;
+      if (Array.isArray(value)) {
+        value.forEach((item) => searchParams.append(`${key}[]`, String(item)));
+        return;
+      }
+      searchParams.append(key, String(value));
+    });
+    return searchParams.toString();
+  },
   prepareHeaders: async (headers) => {
     // Ensure headers is not undefined
     if (!headers) {

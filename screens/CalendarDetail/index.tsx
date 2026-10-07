@@ -1,8 +1,7 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -15,6 +14,7 @@ import ThemeToggle from "../../common/ThemeToggle";
 import { useTheme } from "../../common/ThemeContext";
 import { useLazyQuestionByThemeQuery } from "../../services/question/question.rtkq";
 import { useStudentProgressQuery } from "../../services/studentProgress/student-progress.rtkq";
+import { useLazySmartReviewDueQuestionsQuery, useSmartReviewBlocksQuery, useSmartReviewDueQuery } from "../../services/adaptiveReview/smart-review.rtkq";
 import { styles } from "./styles";
 
 import {
@@ -28,21 +28,48 @@ import {
   Heart,
   LayoutGrid,
   Lock,
-  Moon,
   Pill,
   Play,
-  Sun,
   TrendingUp
 } from "lucide-react-native";
 
 export default function CalendarDetailScreen() {
 
-  const { colors, darkMode, toggleDarkMode } = useTheme();
+  const { colors, darkMode } = useTheme();
   const router = useRouter();
-  const { day } = useLocalSearchParams();
+  const { day, posttestBlockId, studyBlockId } = useLocalSearchParams();
+  const parsedStudyBlockId = Number(Array.isArray(studyBlockId) ? studyBlockId[0] : studyBlockId);
+  const hasStudyBlockId = Number.isInteger(parsedStudyBlockId) && parsedStudyBlockId > 0;
   const { data: studentProgressData } = useStudentProgressQuery();
+  const { data: smartReviewDueData, isLoading: smartReviewDueLoading, isFetching: smartReviewDueFetching, isError: smartReviewDueError, refetch: refetchSmartReviewDue } = useSmartReviewDueQuery(parsedStudyBlockId, { skip: !hasStudyBlockId, refetchOnMountOrArgChange: true });
+  const { data: smartReviewBlocksData, isLoading: smartReviewBlocksLoading, refetch: refetchSmartReviewBlocks } = useSmartReviewBlocksQuery();
   const [fetchQuestionsByTheme] = useLazyQuestionByThemeQuery();
+  const [fetchSmartReviewDueQuestions] = useLazySmartReviewDueQuestionsQuery();
   const [showLoadingModal, setShowLoadingModal] = useState(false);
+  const [loadingModalTitle, setLoadingModalTitle] = useState("Generando el examen");
+  const [openingReviewAssignmentId, setOpeningReviewAssignmentId] = useState<number | null>(null);
+  const [isRetryingReviews, setIsRetryingReviews] = useState(false);
+  const reviewRetryCountRef = useRef(0);
+
+  useFocusEffect(useCallback(() => {
+    void refetchSmartReviewBlocks();
+  }, [refetchSmartReviewBlocks]));
+
+  useEffect(() => {
+    if (smartReviewDueData) {
+      reviewRetryCountRef.current = 0;
+      setIsRetryingReviews(false);
+      return;
+    }
+    if (!smartReviewDueError || smartReviewDueFetching || reviewRetryCountRef.current >= 2) return;
+
+    reviewRetryCountRef.current += 1;
+    setIsRetryingReviews(true);
+    const retryTimer = setTimeout(() => {
+      void refetchSmartReviewDue().finally(() => setIsRetryingReviews(false));
+    }, 800);
+    return () => clearTimeout(retryTimer);
+  }, [refetchSmartReviewDue, smartReviewDueData, smartReviewDueError, smartReviewDueFetching]);
 
   // Get current date
   const currentDate = new Date();
@@ -54,12 +81,31 @@ export default function CalendarDetailScreen() {
     if (!studentProgressData?.calendar || !day) return null;
     return studentProgressData.calendar.find((d: any) => d.date === day);
   }, [studentProgressData, day]);
-
-  // Fallback to demo data if API data not available
-  const selectedDayNumber = day ? parseInt(day as string) : 15;
-  const dayOfWeek = selectedDayData ? selectedDayData.day_name : dayNames[((selectedDayNumber - 16 + 1) % 7)];
-  const currentMonth = monthNames[currentDate.getMonth()];
-  const currentYear = currentDate.getFullYear();
+  const selectedDate = typeof day === "string" ? day : "";
+  const selectedReviews = useMemo(() => (smartReviewDueData?.data?.reviews ?? []).filter(review => review.scheduled_for === selectedDate), [selectedDate, smartReviewDueData]);
+  const reviewsByTheme = useMemo(() => {
+    const groups = new Map<string, typeof selectedReviews>();
+    selectedReviews.forEach(review => {
+      const current = groups.get(review.theme) ?? [];
+      current.push(review);
+      groups.set(review.theme, current);
+    });
+    return Array.from(groups, ([theme, reviews]) => ({ theme, reviews }));
+  }, [selectedReviews]);
+  const selectedPosttestBlock = useMemo(() => {
+    if (!posttestBlockId) return null;
+    return (smartReviewBlocksData?.data?.blocks ?? []).find(block => String(block.id_study_block) === String(posttestBlockId)) ?? null;
+  }, [posttestBlockId, smartReviewBlocksData]);
+  const posttestThemes = selectedPosttestBlock?.themes ?? [];
+  const parsedSelectedDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)
+    ? new Date(`${selectedDate}T12:00:00`)
+    : null;
+  const hasValidSelectedDate = Boolean(parsedSelectedDate && !Number.isNaN(parsedSelectedDate.getTime()));
+  const displayDate = hasValidSelectedDate ? parsedSelectedDate! : currentDate;
+  const selectedDayNumber = displayDate.getDate();
+  const dayOfWeek = selectedDayData?.day_name ?? dayNames[displayDate.getDay()];
+  const currentMonth = monthNames[displayDate.getMonth()];
+  const currentYear = displayDate.getFullYear();
 
   // Helper function to get icon based on topic
   const getIconForTopic = (topic: string) => {
@@ -102,7 +148,11 @@ export default function CalendarDetailScreen() {
       };
     }
 
-    // Fallback data
+    if (selectedReviews.length > 0) {
+      return { name: "Repaso adaptativo", area: "Revisión programada", icon: Brain, iconColor: "#0284c7", progress: 0, completedBlocks: 0, totalBlocks: 0 };
+    }
+
+    // Legacy fallback for dates that are not returned by either API.
     const specialtyData: { [key: number]: any } = {
       16: { name: "Cardiología", area: "Medicina Interna", icon: Heart, iconColor: "#ef4444", progress: 0, completedBlocks: 0, totalBlocks: 5 },
       17: { name: "Pediatría", area: "Medicina Especializada", icon: Brain, iconColor: "#8b5cf6", progress: 60, completedBlocks: 3, totalBlocks: 5 },
@@ -114,7 +164,7 @@ export default function CalendarDetailScreen() {
     };
 
     return specialtyData[selectedDayNumber] || { name: "General", area: "Medicina", icon: Heart, iconColor: "#64748b", progress: 0, completedBlocks: 0, totalBlocks: 5 };
-  }, [selectedDayData, selectedDayNumber]);
+  }, [selectedDayData, selectedDayNumber, selectedReviews.length]);
 
   // Daily schedule with study and simulacro blocks from API
   const schedule = useMemo(() => {
@@ -135,7 +185,9 @@ export default function CalendarDetailScreen() {
       }));
     }
 
-    // Fallback schedule
+    if (selectedReviews.length > 0) return [];
+
+    // Legacy fallback schedule
     return [
       {
         id: 1,
@@ -194,7 +246,7 @@ export default function CalendarDetailScreen() {
         isLocked: true
       }
     ];
-  }, [selectedDayData]);
+  }, [selectedDayData, selectedReviews.length]);
 
   // Use progress from specialty data (matches Dashboard)
   const progressPercentage = specialty.progress;
@@ -234,23 +286,22 @@ export default function CalendarDetailScreen() {
     }
     
     if (block.type === "module") {
-      if (!block.videoUrl) {
-        Alert.alert("Video no disponible", "El contenido todavía no tiene una URL de video disponible.");
+      if (block.videoUrl) {
+        const topicData = selectedDayData?.topics?.[block.topicIndex];
+        router.push({
+          pathname: "/study-module",
+          params: {
+            title: block.topic,
+            area: block.area,
+            // This is only an in-memory navigation value. StudyModule refreshes it
+            // from the API before playback when possible.
+            videoUrl: block.videoUrl,
+            themeUuid: topicData?.theme_uuid,
+          },
+        });
         return;
       }
-      const topicData = selectedDayData?.topics?.[block.topicIndex];
-      router.push({
-        pathname: "/study-module",
-        params: {
-          title: block.topic,
-          area: block.area,
-          // This is only an in-memory navigation value. StudyModule refreshes it
-          // from the API before playback when possible.
-          videoUrl: block.videoUrl,
-          themeUuid: topicData?.theme_uuid,
-        },
-      });
-      return;
+      // Without a video, continue directly to the topic practice below.
     }
 
     // Get the theme_uuid from the selected day data
@@ -262,6 +313,7 @@ export default function CalendarDetailScreen() {
       return;
     }
     
+    setLoadingModalTitle("Generando el examen");
     setShowLoadingModal(true);
     
     try {
@@ -292,10 +344,78 @@ export default function CalendarDetailScreen() {
     }
   }, [selectedDayData, fetchQuestionsByTheme, router]);
 
+  const openReviewExam = useCallback(async (review: (typeof selectedReviews)[number]) => {
+    if (review.id_smart_review_assignment === null || !review.id_student_theme_review || !review.questions_available || showLoadingModal) return;
+    setOpeningReviewAssignmentId(review.id_smart_review_assignment);
+    setLoadingModalTitle("Preparando examen de repaso");
+    setShowLoadingModal(true);
+    const orderedBlocks = [...(smartReviewBlocksData?.data?.blocks ?? [])]
+      .sort((first, second) => first.id_study_block - second.id_study_block);
+    const reviewBlock = orderedBlocks.find(block => block.id_study_block === review.id_study_block)
+      ?? orderedBlocks.find(block => block.themes.some(item => item.theme === review.theme));
+    const reviewPlanNumber = reviewBlock
+      ? orderedBlocks.findIndex(block => block.id_study_block === reviewBlock.id_study_block) + 1
+      : undefined;
+    try {
+      const questionsResponse = await fetchSmartReviewDueQuestions({
+        id_smart_review_assignment: review.id_smart_review_assignment,
+        id_student_theme_review: review.id_student_theme_review,
+      }).unwrap();
+      router.push({
+        pathname: "/adaptive-review",
+        params: {
+          reviewAssignmentId: String(review.id_smart_review_assignment),
+          reviewQuestions: JSON.stringify(questionsResponse.data.questions),
+          reviewTheme: review.theme,
+          studyBlockId: reviewBlock ? String(reviewBlock.id_study_block) : undefined,
+          reviewPlanNumber: reviewPlanNumber ? String(reviewPlanNumber) : undefined,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching smart review questions:", error);
+    } finally {
+      setShowLoadingModal(false);
+      setOpeningReviewAssignmentId(null);
+    }
+  }, [fetchSmartReviewDueQuestions, router, showLoadingModal, smartReviewBlocksData]);
+
   const isLibreDay = specialty.name === "Libre"
     || Boolean(selectedDayData && selectedDayData.total_topics === 0);
+  const reviewsPending = hasStudyBlockId && (smartReviewDueLoading || smartReviewDueFetching || isRetryingReviews);
+  const hasNoActivities = isLibreDay && selectedReviews.length === 0 && !reviewsPending;
 
-  if (isLibreDay) {
+  if (posttestBlockId) {
+    const posttestReady = Boolean(selectedPosttestBlock?.posttest_available);
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}><ArrowLeft size={24} color={colors.text} /></Pressable>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Evaluación de progreso</Text>
+          <ThemeToggle />
+        </View>
+        <ScrollView style={styles.container} contentContainerStyle={styles.posttestPreviewContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.posttestHero}>
+            <View style={styles.posttestHeroIcon}><TrendingUp size={25} color="#0284c7" /></View>
+            <View style={{ flex: 1 }}><Text style={styles.posttestEyebrow}>{posttestReady ? "YA PUEDES RENDIRLA" : "PRÓXIMA EVALUACIÓN"}</Text><Text style={styles.posttestTitle}>Mide cuánto has mejorado</Text><Text style={styles.posttestDescription}>La evaluación incluirá preguntas de los temas trabajados durante tu repaso.</Text></View>
+          </View>
+          {smartReviewBlocksLoading ? (
+            <View style={[styles.adaptiveState, { backgroundColor: colors.card, borderColor: colors.inputBorder }]}><ActivityIndicator color="#0284c7" /><Text style={[styles.adaptiveStateText, { color: colors.subtitle }]}>Cargando contenido de la evaluación...</Text></View>
+          ) : (
+            <View style={styles.posttestThemesSection}>
+              <View style={styles.posttestSectionHeading}><View><Text style={[styles.sectionTitle, { color: colors.text }]}>Temas de la evaluación</Text><Text style={[styles.adaptiveSectionSubtitle, { color: colors.subtitle }]}>Contenido incluido en esta evaluación</Text></View><Text style={styles.posttestThemeCount}>{posttestThemes.length}</Text></View>
+              {posttestThemes.map((theme, themeIndex) => <View key={theme.uuid} style={[styles.posttestThemeCard, { backgroundColor: colors.card, borderColor: colors.inputBorder }]}><View style={styles.posttestThemeHeader}><View style={styles.posttestThemeNumber}><Text style={styles.posttestThemeNumberText}>{themeIndex + 1}</Text></View><View style={{ flex: 1 }}><Text style={[styles.posttestThemeName, { color: colors.text }]}>{theme.theme}</Text><Text style={[styles.posttestThemeMeta, { color: colors.subtitle }]}>Tema de estudio</Text></View><CheckCircle size={19} color="#16a34a" /></View></View>)}
+            </View>
+          )}
+        </ScrollView>
+        <View style={[styles.posttestFooter, { backgroundColor: colors.background, borderTopColor: colors.inputBorder }]}>
+          {!posttestReady && <Text style={[styles.posttestAvailability, { color: colors.subtitle }]}>Disponible el {selectedPosttestBlock?.posttest_available_at ? new Date(selectedPosttestBlock.posttest_available_at.replace(" ", "T")).toLocaleDateString("es-PE", { day: "numeric", month: "long", year: "numeric" }) : "día programado"}</Text>}
+          <Pressable disabled={!posttestReady} onPress={() => router.push({ pathname: "/adaptive-review", params: { studyBlockId: String(selectedPosttestBlock?.id_study_block ?? ""), startPosttest: "true" } })} style={[styles.posttestStartButton, !posttestReady && styles.posttestStartButtonDisabled]}><Text style={styles.posttestStartButtonText}>Iniciar evaluación</Text><ChevronRight size={19} color="#ffffff" /></Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (hasNoActivities) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
@@ -341,7 +461,7 @@ export default function CalendarDetailScreen() {
 
 
         {/* Progress Section */}
-        <View style={styles.progressSection}>
+        {selectedDayData && <View style={styles.progressSection}>
           <View style={[styles.progressCard, { backgroundColor: colors.card, borderColor: colors.inputBorder }]}>
             <View style={styles.progressCardHeader}>
               <View>
@@ -358,18 +478,60 @@ export default function CalendarDetailScreen() {
               <View style={styles.statItem}><Clock size={16} color={colors.subtitle} /><Text style={[styles.statText, { color: colors.subtitle }]}>{totalBlocks - completedBlocks} restantes</Text></View>
             </View>
           </View>
-        </View>
+        </View>}
 
 
         {/* Schedule Section */}
         <View style={styles.scheduleSection}>
+          <View style={styles.adaptiveSectionHeader}>
+            <View>
+              <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 3 }]}>Repasos programados</Text>
+              <Text style={[styles.adaptiveSectionSubtitle, { color: colors.subtitle }]}>Selecciona un tema para iniciar su repaso</Text>
+            </View>
+            {reviewsByTheme.length > 0 && <View style={styles.adaptiveCount}><Text style={styles.adaptiveCountText}>{reviewsByTheme.length}</Text></View>}
+          </View>
+          {reviewsPending ? (
+            <View style={styles.calendarLoading}><ActivityIndicator color="#0284c7" /><Text style={[styles.calendarLoadingText, { color: colors.subtitle }]}>Cargando repaso...</Text></View>
+          ) : smartReviewDueError ? (
+            <View style={[styles.adaptiveState, { backgroundColor: colors.card, borderColor: colors.inputBorder }]}><Text style={[styles.adaptiveStateText, { color: colors.subtitle }]}>No pudimos cargar tus revisiones.</Text><Pressable onPress={() => refetchSmartReviewDue()} style={styles.adaptiveRetry}><Text style={styles.adaptiveRetryText}>Reintentar</Text></Pressable></View>
+          ) : reviewsByTheme.length === 0 ? (
+            <View style={[styles.adaptiveState, { backgroundColor: colors.card, borderColor: colors.inputBorder }]}><CheckCircle size={20} color="#16a34a" /><Text style={[styles.adaptiveStateText, { color: colors.subtitle }]}>No tienes revisiones adaptativas para este día.</Text></View>
+          ) : reviewsByTheme.map(group => {
+            const hasOverdue = group.reviews.some(item => item.review_status === "overdue");
+            const hasActive = group.reviews.some(item => item.review_status === "active");
+            const accent = hasOverdue ? "#ef4444" : hasActive ? "#16a34a" : "#0284c7";
+            const statusLabel = hasOverdue ? "Vencido" : hasActive ? "Disponible" : "Próximo";
+            const review = [...group.reviews].sort((first, second) => {
+              const priority = (status: string) => status === "overdue" ? 0 : status === "active" ? 1 : 2;
+              return priority(first.review_status) - priority(second.review_status);
+            })[0];
+            const canStartReview = Boolean(review?.questions_available
+              && review.id_smart_review_assignment !== null
+              && review.id_student_theme_review);
+            return (
+              <View key={group.theme} style={[styles.adaptiveThemeGroup, { backgroundColor: colors.card, borderColor: `${accent}66` }]}>
+                <Pressable disabled={!canStartReview || openingReviewAssignmentId !== null} style={({ pressed }) => [styles.adaptiveThemeHeader, pressed && canStartReview && styles.adaptiveObjectiveOptionPressed]} onPress={() => openReviewExam(review)}>
+                  <View style={[styles.adaptiveIcon, { backgroundColor: `${accent}18` }]}><Brain size={19} color={accent} /></View>
+                  <View style={styles.adaptiveThemeContent}>
+                    <Text style={[styles.adaptiveTheme, { color: colors.text }]}>{group.theme}</Text>
+                    <Text style={[styles.adaptiveThemeSummary, { color: colors.subtitle }]}>{canStartReview ? "Toca para cargar las preguntas" : "Disponible próximamente"}</Text>
+                  </View>
+                  <View style={[styles.adaptiveStatus, { backgroundColor: `${accent}18` }]}><Text style={[styles.adaptiveStatusText, { color: accent }]}>{statusLabel}</Text></View>
+                  {canStartReview && <ChevronRight size={18} color={accent} />}
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+
+        {updatedSchedule.length > 0 && <View style={styles.scheduleSection}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             Cronograma de Práctica
           </Text>
 
           {updatedSchedule.map((block: any, index: number) => {
             const BlockIcon = getBlockIcon(block.type);
-            const isUnavailable = block.isLocked || (block.type === "module" && !block.videoUrl);
+            const isUnavailable = block.isLocked;
             const cardBackground = darkMode
               ? (block.isCompleted ? "#062e24" : block.isLocked ? "#0b1220" : "#0f2033")
               : (block.isCompleted ? "#f0fdf4" : block.isLocked ? "#f8fafc" : "#ffffff");
@@ -419,7 +581,7 @@ export default function CalendarDetailScreen() {
 
                   {block.type === "module" && (
                     <Text style={[styles.blockArea, { color: colors.subtitle }]}>
-                      Video de contenido  →  Práctica
+                      {block.videoUrl ? "Video de contenido  →  Práctica" : "Simulacro disponible"}
                     </Text>
                   )}
 
@@ -444,7 +606,7 @@ export default function CalendarDetailScreen() {
             );
           })}
 
-        </View>
+        </View>}
 
 
         {/* Bottom spacing */}
@@ -457,7 +619,7 @@ export default function CalendarDetailScreen() {
       <Modal
         visible={showLoadingModal}
         onClose={() => {}}
-        title="Generando el examen"
+        title={loadingModalTitle}
         logoSource={require("../../assets/logo_app.png")}
         showFooter={false}
       >

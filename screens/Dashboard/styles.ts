@@ -125,6 +125,7 @@ export const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressBarContainer: {
+    flexDirection: "row",
     height: 20,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 10,
@@ -133,6 +134,9 @@ export const styles = StyleSheet.create({
   progressBar: {
     height: "100%",
     borderRadius: 10,
+  },
+  progressBarSegment: {
+    height: "100%",
   },
   progressStats: {
     flexDirection: "row",
@@ -189,10 +193,14 @@ export const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
+  dayCardPosttest: { borderColor: "#bae6fd", backgroundColor: "#f0f9ff" },
   dayCardPressed: {
     backgroundColor: "#e0f2fe",
     borderColor: "#0284c7",
     transform: [{ scale: 0.99 }],
+  },
+  dayCardDisabled: {
+    opacity: 0.55,
   },
   dayDateBadge: {
     width: 54,
@@ -203,6 +211,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dayDateBadgeToday: { backgroundColor: "#0284c7" },
+  dayDateBadgePosttest: { backgroundColor: "#e0f2fe" },
   dayIconContainer: {
     width: 30,
     height: 30,
@@ -227,8 +236,10 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   dayTextToday: { color: "rgba(255,255,255,0.85)" },
+  dayTextPosttest: { color: "#0284c7" },
   dayDateNumber: { color: "#0f172a", fontSize: 24, lineHeight: 28, fontWeight: "800" },
   dayDateNumberToday: { color: "#ffffff" },
+  dayDateNumberPosttest: { color: "#0369a1" },
   daySubject: {
     flex: 1,
     fontSize: 14,
@@ -240,4 +251,18 @@ export const styles = StyleSheet.create({
   dayProgressText: { fontSize: 11, fontWeight: "800" },
   dayProgressTrack: { height: 5, borderRadius: 3, backgroundColor: "#e2e8f0", overflow: "hidden" },
   dayProgressFill: { height: "100%", borderRadius: 3 },
+  calendarMonthSection: { marginBottom: 18 },
+  calendarMonthHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
+  calendarMonthTitle: { fontSize: 13, fontWeight: "900" },
+  calendarMonthLine: { flex: 1, height: 1 },
+  calendarMonthItems: { gap: 10 },
+  calendarTypeBadge: { paddingHorizontal: 7, paddingVertical: 4, borderRadius: 7, backgroundColor: "#e0f2fe" },
+  calendarTypeBadgeAvailable: { backgroundColor: "#dcfce7" },
+  calendarTypeBadgeText: { color: "#0284c7", fontSize: 7, fontWeight: "900" },
+  calendarTypeBadgeTextAvailable: { color: "#15803d" },
+  smartReviewModalText: {
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+  },
 });

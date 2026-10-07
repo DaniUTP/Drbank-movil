@@ -1,8 +1,11 @@
 import { getFCMToken } from "@/FirebaseConfig";
 import { useLoginMutation } from "@/services/auth/login.rtkq";
+import { api } from "@/store/api";
+import type { AppDispatch } from "@/store";
 import { validateLoginForm } from "@/utils/login/validation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { useDispatch } from "react-redux";
 import React, { useCallback, useRef, useState } from "react";
 import {
     Keyboard,
@@ -18,6 +21,7 @@ import { styles } from "./styles";
 export function LoginScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
 
   // Form state
   const [email, setEmail] = useState("");
@@ -92,6 +96,9 @@ export function LoginScreen() {
         await AsyncStorage.removeItem('token_expiration');
       }
 
+      // Discard requests cached under the previous authentication session so
+      // dashboard/review queries start cleanly with the newly stored token.
+      dispatch(api.util.resetApiState());
       router.replace("/dashboard");
     } catch (error: any) {
       console.error('Login error:', error);
@@ -115,7 +122,7 @@ export function LoginScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, router, loginMutation, rememberMe]);
+  }, [dispatch, email, password, router, loginMutation, rememberMe]);
 
   return (
     <View style={{ backgroundColor: colors.card }}>

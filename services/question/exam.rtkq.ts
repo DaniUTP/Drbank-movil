@@ -1,7 +1,9 @@
 import { api } from "@/store/api";
-import { DownloadExamsRequestDTO, DownloadExamsResponseDTO, ExamRequestDTO, ExamResponseDTO, GetExamRequestDTO, GetExamResponseDTO, UpdateExamStatusRequestDTO, UpdateExamStatusResponseDTO } from "@/types/question/exam.dto";
+import { TagTypes } from "@/store/constants/tagTypes.constants";
+import { DownloadExamsRequestDTO, DownloadExamsResponseDTO, ExamRequestDTO, ExamResponseDTO, GetExamDetailResponseDTO, GetExamRequestDTO, GetExamResponseDTO, UpdateExamStatusRequestDTO, UpdateExamStatusResponseDTO } from "@/types/question/exam.dto";
 
 export const examSlice = api.injectEndpoints({
+    overrideExisting: true,
     endpoints: (builder) => ({
         exam: builder.mutation<ExamResponseDTO, ExamRequestDTO>({
             query: (body) => ({
@@ -11,13 +13,23 @@ export const examSlice = api.injectEndpoints({
             }),
         }),
         getExam: builder.query<GetExamResponseDTO, GetExamRequestDTO>({
-            query: (params) => ({
+            providesTags: [TagTypes.ExamHistory],
+            query: ({ difficulty: _difficulty, ...params }) => ({
                 url: '/quiz/exam',
                 method: 'GET',
-                params
+                params: params.id_study_block
+                    ? { ...params, difficulty: true }
+                    : params
+            }),
+        }),
+        getExamDetail: builder.query<GetExamDetailResponseDTO, string>({
+            query: (uuid) => ({
+                url: `/quiz/exam/${uuid}`,
+                method: 'GET',
             }),
         }),
         updateExamStatus: builder.mutation<UpdateExamStatusResponseDTO, UpdateExamStatusRequestDTO>({
+            invalidatesTags: [TagTypes.ExamHistory],
             query: (body) => ({
                 url: '/quiz/exam/status',
                 method: 'PATCH',
@@ -38,6 +50,8 @@ export const {
     useExamMutation,
     useGetExamQuery,
     useLazyGetExamQuery,
+    useGetExamDetailQuery,
+    useLazyGetExamDetailQuery,
     useUpdateExamStatusMutation,
     useDownloadExamsMutation,
 } = examSlice;

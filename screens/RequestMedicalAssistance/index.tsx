@@ -855,7 +855,7 @@ export default function RequestMedicalAssistanceScreen() {
         <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.card }]}>
           <ArrowLeft size={20} color={colors.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Asistencia médica</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Asesoría médica</Text>
         <ThemeToggle />
       </View>
 

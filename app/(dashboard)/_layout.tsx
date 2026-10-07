@@ -1,6 +1,6 @@
 import { useTheme } from "@/common/ThemeContext";
 import { Tabs, usePathname, useRouter } from "expo-router";
-import { BarChart3, Calendar, ChevronRight, FileText, Headphones, HeartPulse, Home, Layers, Plus, User, X } from "lucide-react-native";
+import { BarChart3, BrainCircuit, Calendar, ChevronRight, FileText, Headphones, HeartPulse, Home, Layers, Plus, User, X } from "lucide-react-native";
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -56,7 +56,7 @@ const MenuOption = memo(function MenuOption({
 // ============================================
 // FLOATING MENU COMPONENT
 // ============================================
-type RouteType = "/calendar-detail" | "/history-exam" | "/support" | "/download-exams" | "/request-medical-assistance";
+type RouteType = "/adaptive-review" | "/calendar-detail" | "/history-exam" | "/support" | "/download-exams" | "/request-medical-assistance";
 
 interface FloatingMenuProps {
   isOpen: boolean;
@@ -134,6 +134,9 @@ const FloatingMenu = memo(function FloatingMenu({
       case "medical-assistance":
         onNavigate("/request-medical-assistance");
         break;
+      case "adaptive-review":
+        onNavigate("/adaptive-review");
+        break;
     }
   }, [onClose, onNavigate] as const);
 
@@ -159,6 +162,15 @@ const FloatingMenu = memo(function FloatingMenu({
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.optionsList}>
+            <MenuOption
+              bgColor={darkMode ? "#102b3a" : "#ecfeff"}
+              iconBg="#0891b2"
+              icon={<BrainCircuit size={24} color="white" />}
+              title="Repaso Adaptativo"
+              description="Refuerza tus conocimientos"
+              onPress={() => handleOptionPress("adaptive-review")}
+              colors={colors}
+            />
             <MenuOption
               bgColor={darkMode ? "#102b28" : "#f0fdf4"}
               iconBg="#16a34a"
@@ -190,7 +202,7 @@ const FloatingMenu = memo(function FloatingMenu({
               bgColor={darkMode ? "#392126" : "#fff1f2"}
               iconBg="#dc2626"
               icon={<HeartPulse size={24} color="white" />}
-              title="Solicitar asistencia médica"
+              title="Solicitar asesoría médica"
               description="Contacta con nuestro equipo médico"
               onPress={() => handleOptionPress("medical-assistance")}
               colors={colors}
