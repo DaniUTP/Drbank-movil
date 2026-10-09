@@ -1,3 +1,4 @@
+import { parseApiError } from "@/utils/parseApiError";
 import { useAreaQuery } from "@/services/question/area.rtkq";
 import { useExamTypeQuery } from "@/services/question/exam-type.rtkq";
 import { useSpecialtyQuery } from "@/services/question/specialty.rtkq";
@@ -8,6 +9,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import {
     ArrowLeft,
     Check,
+    CheckCheck,
     ChevronDown,
     Search,
     Settings,
@@ -16,6 +18,7 @@ import {
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     KeyboardAvoidingView,
     Modal,
@@ -46,22 +49,41 @@ export default function SimulacreGeneratorScreen() {
 
   // Form state
   const [examType, setExamType] = useState("");
-  const [area, setArea] = useState("");
-  const [areaId, setAreaId] = useState<number | null>(null);
-  const [specialty, setSpecialty] = useState("");
-  const [specialtyId, setSpecialtyId] = useState<number | null>(null);
-  const [theme, setTheme] = useState("");
-  const [themeId, setThemeId] = useState<string | null>(null);
-  const [years, setYears] = useState("");
+  const [areaIds, setAreaIds] = useState<number[]>([]);
+  const [specialtyIds, setSpecialtyIds] = useState<number[]>([]);
+  const [themeIds, setThemeIds] = useState<string[]>([]);
+  const [selectedThemeYearFilter, setSelectedThemeYearFilter] = useState<string[] | null>(null);
+  const [selectedYears, setSelectedYears] = useState<string[]>([]);
+  const [debouncedThemeFilters, setDebouncedThemeFilters] = useState(() => ({
+    exam: examType,
+    area: areaIds,
+    specialty: specialtyIds,
+    year: selectedYears,
+  }));
   const [examMode, setExamMode] = useState("");
   const [questionCount, setQuestionCount] = useState(5);
   const [timeLimit, setTimeLimit] = useState(30);
   const isQuestionCountValid = Number.isInteger(questionCount) && questionCount > 0;
+  const themeFilterKey = JSON.stringify([examType, areaIds, specialtyIds, selectedYears]);
+  const debouncedThemeFilterKey = JSON.stringify([
+    debouncedThemeFilters.exam,
+    debouncedThemeFilters.area,
+    debouncedThemeFilters.specialty,
+    debouncedThemeFilters.year,
+  ]);
+  const areThemeFiltersSettled = themeFilterKey === debouncedThemeFilterKey;
 
-  const selectedYears = useMemo(
-    () => years.split(",").map((year) => year.trim()).filter(Boolean),
-    [years]
-  );
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedThemeFilters({
+        exam: examType,
+        area: areaIds,
+        specialty: specialtyIds,
+        year: selectedYears,
+      });
+    }, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [examType, areaIds, specialtyIds, selectedYears]);
 
   // Each selector is keyed by the filters that constrain its available options.
   // currentData prevents cached data from a previous key appearing for a newer selection.
@@ -71,7 +93,7 @@ export default function SimulacreGeneratorScreen() {
     isLoading: areasInitialLoading,
     isFetching: areasFetching,
   } = useAreaQuery(
-    { exam: examType, year: selectedYears.length ? selectedYears : undefined },
+    { exam: examType },
     { skip: !examType }
   );
   const areasData = useMemo(() => areasCurrentData ?? [], [areasCurrentData]);
@@ -84,9 +106,9 @@ export default function SimulacreGeneratorScreen() {
   } = useYearQuery(
     {
       exam: examType,
-      area: areaId ?? undefined,
-      specialty: specialtyId ?? undefined,
-      theme: themeId ?? undefined,
+      area: areaIds.length ? areaIds : undefined,
+      specialty: specialtyIds.length ? specialtyIds : undefined,
+      theme: themeIds.length ? themeIds : undefined,
     },
     { skip: !examType }
   );
@@ -99,11 +121,10 @@ export default function SimulacreGeneratorScreen() {
     isFetching: specialtiesFetching,
   } = useSpecialtyQuery(
     {
-      area: areaId ?? 0,
+      area: areaIds,
       exam: examType,
-      year: selectedYears.length ? selectedYears : undefined,
     },
-    { skip: !examType || areaId === null }
+    { skip: !examType || areaIds.length === 0 }
   );
   const specialtiesData = useMemo(() => specialtiesCurrentData ?? [], [specialtiesCurrentData]);
   const specialtiesLoading = specialtiesInitialLoading || specialtiesFetching;
@@ -114,12 +135,19 @@ export default function SimulacreGeneratorScreen() {
     isFetching: themesFetching,
   } = useThemeQuery(
     {
-      specialty: specialtyId ?? 0,
-      area: areaId ?? undefined,
-      exam: examType,
-      year: selectedYears.length ? selectedYears : undefined,
+      specialty: debouncedThemeFilters.specialty,
+      area: debouncedThemeFilters.area,
+      exam: debouncedThemeFilters.exam,
+      ...(selectedThemeYearFilter ?? debouncedThemeFilters.year).length > 0
+        ? { year: selectedThemeYearFilter ?? debouncedThemeFilters.year }
+        : {},
     },
-    { skip: !examType || areaId === null || specialtyId === null }
+    {
+      skip: (!areThemeFiltersSettled && themeIds.length === 0)
+        || !debouncedThemeFilters.exam
+        || debouncedThemeFilters.area.length === 0
+        || debouncedThemeFilters.specialty.length === 0,
+    }
   );
   const themesData = useMemo(() => themesCurrentData ?? [], [themesCurrentData]);
   const themesLoading = themesInitialLoading || themesFetching;
@@ -130,7 +158,7 @@ export default function SimulacreGeneratorScreen() {
     const validYears = new Set(yearsData.map((item) => String(item.year)));
     const compatibleYears = selectedYears.filter((year) => validYears.has(year));
     if (compatibleYears.length !== selectedYears.length) {
-      setYears(compatibleYears.join(", "));
+      setSelectedYears(compatibleYears);
     }
   }, [examType, selectedYears, yearsData, yearsLoading]);
 
@@ -170,6 +198,25 @@ export default function SimulacreGeneratorScreen() {
     })),
     [themesData]
   );
+  const selectedAreas = useMemo(
+    () => areas.filter((item) => areaIds.includes(Number(item.id))),
+    [areaIds, areas]
+  );
+  const selectedSpecialties = useMemo(
+    () => specialties.filter((item) => specialtyIds.includes(Number(item.id))),
+    [specialties, specialtyIds]
+  );
+  const selectedThemes = useMemo(
+    () => themes.filter((item) => themeIds.includes(item.id)),
+    [themeIds, themes]
+  );
+  const formatSelection = (items: { name: string }[], placeholder: string, selectionCount = items.length) => {
+    if (selectionCount === 0) return placeholder;
+    if (items.length !== selectionCount) {
+      return `${selectionCount} ${selectionCount === 1 ? "seleccionada" : "seleccionadas"}`;
+    }
+    return items.length === 1 ? items[0].name : `${items.length} seleccionadas`;
+  };
   const availableYears = useMemo(
     () => yearsData.map((item) => ({ id: String(item.year), name: String(item.year) })),
     [yearsData]
@@ -229,69 +276,116 @@ export default function SimulacreGeneratorScreen() {
 
   const selectExamType = (type: { id: string; name: string }) => {
     setExamType(type.name);
-    setArea("");
-    setAreaId(null);
-    setSpecialty("");
-    setSpecialtyId(null);
-    setTheme("");
-    setThemeId(null);
-    setYears("");
+    setAreaIds([]);
+    setSpecialtyIds([]);
+    setThemeIds([]);
+    setSelectedThemeYearFilter(null);
+    setSelectedYears([]);
     setShowExamTypeModal(false);
     setExamTypeSearch("");
   };
 
   const selectArea = (a: { id: string; name: string }) => {
-    setArea(a.name);
-    setAreaId(Number(a.id));
-    setShowAreaModal(false);
-    setAreaSearch("");
-    setSpecialty(""); // Reset specialty when area changes
-    setSpecialtyId(null);
-    setTheme(""); // Reset theme when area changes
-    setThemeId(null);
+    const id = Number(a.id);
+    setAreaIds((current) => current.includes(id)
+      ? current.filter((selectedId) => selectedId !== id)
+      : [...current, id]);
+    setSpecialtyIds([]);
+    setThemeIds([]);
+    setSelectedThemeYearFilter(null);
   };
 
   const selectSpecialty = (spec: { id: string; name: string }) => {
-    setSpecialty(spec.name);
-    setSpecialtyId(Number(spec.id));
-    setShowSpecialtyModal(false);
-    setSpecialtySearch("");
-    setTheme(""); // Reset theme when specialty changes
-    setThemeId(null);
+    const id = Number(spec.id);
+    setSpecialtyIds((current) => current.includes(id)
+      ? current.filter((selectedId) => selectedId !== id)
+      : [...current, id]);
+    setThemeIds([]);
+    setSelectedThemeYearFilter(null);
   };
 
   const selectTheme = (t: { id: string; name: string }) => {
-    setTheme(t.name);
-    setThemeId(t.id);
-    setShowThemeModal(false);
-    setThemeSearch("");
+    const isSelected = themeIds.includes(t.id);
+    if (!isSelected && themeIds.length === 0) {
+      setSelectedThemeYearFilter(debouncedThemeFilters.year);
+    } else if (isSelected && themeIds.length === 1) {
+      setSelectedThemeYearFilter(null);
+    }
+    setThemeIds((current) => isSelected
+      ? current.filter((selectedId) => selectedId !== t.id)
+      : [...current, t.id]);
   };
 
   const clearArea = () => {
-    setArea("");
-    setAreaId(null);
-    setSpecialty("");
-    setSpecialtyId(null);
-    setTheme("");
-    setThemeId(null);
+    setAreaIds([]);
+    setSpecialtyIds([]);
+    setThemeIds([]);
+    setSelectedThemeYearFilter(null);
   };
 
   const clearSpecialty = () => {
-    setSpecialty("");
-    setSpecialtyId(null);
-    setTheme("");
-    setThemeId(null);
+    setSpecialtyIds([]);
+    setThemeIds([]);
+    setSelectedThemeYearFilter(null);
   };
 
   const clearTheme = () => {
-    setTheme("");
-    setThemeId(null);
+    setThemeIds([]);
+    setSelectedThemeYearFilter(null);
   };
 
-  const updateYears = (nextYears: string[]) => {
-    setYears(nextYears.join(", "));
-    clearArea();
+  const selectAllAreas = () => {
+    setAreaIds((current) => Array.from(new Set([...current, ...filteredAreas.map((item) => Number(item.id))])));
+    setSpecialtyIds([]);
+    setThemeIds([]);
   };
+
+  const selectAllSpecialties = () => {
+    setSpecialtyIds((current) => Array.from(new Set([...current, ...filteredSpecialties.map((item) => Number(item.id))])));
+    setThemeIds([]);
+  };
+
+  const selectAllThemes = () => {
+    setThemeIds((current) => Array.from(new Set([...current, ...filteredThemes.map((item) => item.id)])));
+  };
+
+  const selectAllYears = () => {
+    setSelectedYears((current) => Array.from(new Set([...current, ...filteredYears.map((item) => item.name)])));
+  };
+
+  const renderBulkSelectionActions = (
+    hasOptions: boolean,
+    hasSelection: boolean,
+    onSelectAll: () => void,
+    onClear: () => void
+  ) => (
+    <View style={styles.selectionActions}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Seleccionar todas las opciones visibles"
+        style={[styles.selectionAction, !hasOptions && styles.selectionActionDisabled]}
+        disabled={!hasOptions}
+        onPress={onSelectAll}
+      >
+        <CheckCheck size={17} color={hasOptions ? "#0284c7" : colors.subtitle} />
+        <Text style={[styles.selectionActionText, { color: hasOptions ? "#0284c7" : colors.subtitle }]}>
+          Seleccionar todo
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Limpiar selección"
+        style={[styles.selectionAction, !hasSelection && styles.selectionActionDisabled]}
+        disabled={!hasSelection}
+        onPress={onClear}
+      >
+        <X size={17} color={hasSelection ? "#ef4444" : colors.subtitle} />
+        <Text style={[styles.selectionActionText, { color: hasSelection ? "#ef4444" : colors.subtitle }]}>
+          Limpiar
+        </Text>
+      </Pressable>
+    </View>
+  );
 
   const selectExamMode = (mode: { id: string; name: string }) => {
     setExamMode(mode.name);
@@ -319,7 +413,7 @@ export default function SimulacreGeneratorScreen() {
       <Text style={[styles.optionItemText, { color: colors.text }]}>
         {item.name}
       </Text>
-      {areaId === Number(item.id) && <Check size={18} color="#0284c7" />}
+      {areaIds.includes(Number(item.id)) && <Check size={18} color="#0284c7" />}
     </Pressable>
   );
 
@@ -331,7 +425,7 @@ export default function SimulacreGeneratorScreen() {
       <Text style={[styles.optionItemText, { color: colors.text }]}>
         {item.name}
       </Text>
-      {specialtyId === Number(item.id) && <Check size={18} color="#0284c7" />}
+      {specialtyIds.includes(Number(item.id)) && <Check size={18} color="#0284c7" />}
     </Pressable>
   );
 
@@ -343,7 +437,7 @@ export default function SimulacreGeneratorScreen() {
       <Text style={[styles.optionItemText, { color: colors.text }]}>
         {item.name}
       </Text>
-      {themeId === item.id && <Check size={18} color="#0284c7" />}
+      {themeIds.includes(item.id) && <Check size={18} color="#0284c7" />}
     </Pressable>
   );
 
@@ -351,11 +445,11 @@ export default function SimulacreGeneratorScreen() {
     const isSelected = selectedYears.includes(item.name);
     return (
       <Pressable
-        style={[styles.optionItem, isSelected && { backgroundColor: "#e0f2fe" }]}
+        style={styles.optionItem}
         onPress={() => {
-          updateYears([item.name]);
-          setShowYearsModal(false);
-          setYearsSearch("");
+          setSelectedYears((current) => isSelected
+            ? current.filter((year) => year !== item.name)
+            : [...current, item.name]);
         }}
       >
         <Text style={[styles.optionItemText, { color: colors.text }]}>
@@ -417,6 +511,11 @@ export default function SimulacreGeneratorScreen() {
       </Pressable>
     );
   };
+
+  const showAreasLoading = areasLoading && areaIds.length === 0;
+  const showSpecialtiesLoading = specialtiesLoading && specialtyIds.length === 0;
+  const showThemesLoading = themesLoading && themeIds.length === 0;
+  const showYearsLoading = yearsLoading && selectedYears.length === 0;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -487,43 +586,6 @@ export default function SimulacreGeneratorScreen() {
               </Pressable>
             </View>
 
-            {/* Año (Opcional) */}
-            <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: examType ? colors.subtitle : "#94a3b8" }]}>
-                Año <Text style={styles.optional}>(Opcional)</Text>
-              </Text>
-              <Pressable
-                style={[
-                  styles.selector,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.inputBorder,
-                    opacity: yearsLoading ? 0.7 : 1,
-                  }
-                ]}
-                onPress={() => examType && !yearsLoading && setShowYearsModal(true)}
-                disabled={!examType || yearsLoading}
-              >
-                <Text style={[styles.selectorText, years ? { color: colors.text } : { color: examType ? colors.subtitle : "#94a3b8" }]}>
-                  {yearsLoading
-                    ? "Cargando..."
-                    : (years || (examType
-                      ? (availableYears.length ? "Selecciona el año" : "No hay años compatibles")
-                      : "Selecciona primero el tipo de examen"))}
-                </Text>
-                <ChevronDown size={20} color={examType ? colors.subtitle : "#94a3b8"} />
-              </Pressable>
-              {years && (
-                <Pressable
-                  style={styles.clearButton}
-                  onPress={() => updateYears([])}
-                >
-                  <X size={16} color="#ef4444" />
-                  <Text style={styles.clearButtonText}>Limpiar</Text>
-                </Pressable>
-              )}
-            </View>
-
             {/* Área */}
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.subtitle }]}>
@@ -535,32 +597,30 @@ export default function SimulacreGeneratorScreen() {
                   {
                     backgroundColor: colors.card,
                     borderColor: colors.inputBorder,
-                    opacity: areasLoading ? 0.7 : 1,
+                    opacity: showAreasLoading ? 0.7 : 1,
                   }
                 ]}
                 onPress={() => examType && !areasLoading && setShowAreaModal(true)}
                 disabled={!examType || areasLoading}
               >
-                <Text style={[styles.selectorText, area ? { color: colors.text } : { color: colors.subtitle }]}>
-                  {areasLoading
+                <Text style={[styles.selectorText, areaIds.length ? { color: colors.text } : { color: colors.subtitle }]}>
+                  {showAreasLoading
                     ? "Cargando..."
-                    : (area || (examType
+                    : formatSelection(
+                      selectedAreas,
+                      examType
                       ? (areas.length ? "Selecciona el área" : "No hay áreas compatibles")
-                      : "Selecciona primero el tipo de examen"))}
+                      : "Selecciona primero el tipo de examen",
+                      areaIds.length
+                    )}
                 </Text>
                 <ChevronDown size={20} color={colors.subtitle} />
               </Pressable>
-              {area && (
-                <Pressable style={styles.clearButton} onPress={clearArea}>
-                  <X size={16} color="#ef4444" />
-                  <Text style={styles.clearButtonText}>Limpiar</Text>
-                </Pressable>
-              )}
             </View>
 
             {/* Especialidades */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: (area && !specialtiesLoading) ? colors.subtitle : "#94a3b8" }]}>
+              <Text style={[styles.label, { color: areaIds.length > 0 ? colors.subtitle : "#94a3b8" }]}>
                 Especialidades <Text style={styles.optional}>(Opcional)</Text>
               </Text>
               <Pressable
@@ -569,32 +629,30 @@ export default function SimulacreGeneratorScreen() {
                   {
                     backgroundColor: colors.card,
                     borderColor: colors.inputBorder,
-                    opacity: specialtiesLoading ? 0.7 : 1,
+                    opacity: showSpecialtiesLoading ? 0.7 : 1,
                   }
                 ]}
-                onPress={() => area && !specialtiesLoading && setShowSpecialtyModal(true)}
-                disabled={!area || specialtiesLoading}
+                onPress={() => areaIds.length > 0 && !specialtiesLoading && setShowSpecialtyModal(true)}
+                disabled={areaIds.length === 0 || specialtiesLoading}
               >
-                <Text style={[styles.selectorText, specialty ? { color: colors.text } : { color: "#94a3b8" }]}>
-                  {specialtiesLoading
+                <Text style={[styles.selectorText, specialtyIds.length ? { color: colors.text } : { color: "#94a3b8" }]}>
+                  {showSpecialtiesLoading
                     ? "Cargando..."
-                    : (specialty || (area
+                    : formatSelection(
+                      selectedSpecialties,
+                      areaIds.length > 0
                       ? (specialties.length ? "Selecciona la especialidad" : "No hay especialidades compatibles")
-                      : "Selecciona primero el área"))}
+                      : "Selecciona primero el área",
+                      specialtyIds.length
+                    )}
                 </Text>
-                <ChevronDown size={20} color={area ? colors.subtitle : "#94a3b8"} />
+                <ChevronDown size={20} color={areaIds.length > 0 ? colors.subtitle : "#94a3b8"} />
               </Pressable>
-              {specialty && (
-                <Pressable style={styles.clearButton} onPress={clearSpecialty}>
-                  <X size={16} color="#ef4444" />
-                  <Text style={styles.clearButtonText}>Limpiar</Text>
-                </Pressable>
-              )}
             </View>
 
             {/* Tema */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: (specialty && !themesLoading) ? colors.subtitle : "#94a3b8" }]}>
+              <Text style={[styles.label, { color: specialtyIds.length > 0 ? colors.subtitle : "#94a3b8" }]}>
                 Tema <Text style={styles.optional}>(Opcional)</Text>
               </Text>
               <Pressable
@@ -603,27 +661,57 @@ export default function SimulacreGeneratorScreen() {
                   {
                     backgroundColor: colors.card,
                     borderColor: colors.inputBorder,
-                    opacity: themesLoading ? 0.7 : 1,
+                    opacity: showThemesLoading ? 0.7 : 1,
                   }
                 ]}
-                onPress={() => specialty && !themesLoading && setShowThemeModal(true)}
-                disabled={!specialty || themesLoading}
+                onPress={() => specialtyIds.length > 0 && !themesLoading && setShowThemeModal(true)}
+                disabled={specialtyIds.length === 0 || themesLoading}
               >
-                <Text style={[styles.selectorText, theme ? { color: colors.text } : { color: "#94a3b8" }]}>
-                  {themesLoading
+                <Text style={[styles.selectorText, themeIds.length ? { color: colors.text } : { color: "#94a3b8" }]}>
+                  {showThemesLoading
                     ? "Cargando..."
-                    : (theme || (specialty
+                    : formatSelection(
+                      selectedThemes,
+                      specialtyIds.length > 0
                       ? (themes.length ? "Selecciona un tema" : "No hay temas compatibles")
-                      : "Selecciona primero la especialidad"))}
+                      : "Selecciona primero la especialidad",
+                      themeIds.length
+                    )}
                 </Text>
-                <ChevronDown size={20} color={specialty ? colors.subtitle : "#94a3b8"} />
+                <ChevronDown size={20} color={specialtyIds.length > 0 ? colors.subtitle : "#94a3b8"} />
               </Pressable>
-              {theme && (
-                <Pressable style={styles.clearButton} onPress={clearTheme}>
-                  <X size={16} color="#ef4444" />
-                  <Text style={styles.clearButtonText}>Limpiar</Text>
-                </Pressable>
-              )}
+            </View>
+
+            {/* Año (Opcional) */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: examType ? colors.subtitle : "#94a3b8" }]}>
+                Año <Text style={styles.optional}>(Opcional)</Text>
+              </Text>
+              <Pressable
+                style={[
+                  styles.selector,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.inputBorder,
+                    opacity: showYearsLoading ? 0.7 : 1,
+                  }
+                ]}
+                onPress={() => examType && !yearsLoading && setShowYearsModal(true)}
+                disabled={!examType || yearsLoading}
+              >
+                <Text style={[styles.selectorText, selectedYears.length ? { color: colors.text } : { color: examType ? colors.subtitle : "#94a3b8" }]}>
+                  {showYearsLoading
+                    ? "Cargando..."
+                    : (selectedYears.length === 1
+                      ? selectedYears[0]
+                      : selectedYears.length > 1
+                        ? `${selectedYears.length} años seleccionados`
+                        : examType
+                          ? (availableYears.length ? "Selecciona uno o varios años" : "No hay años compatibles")
+                          : "Selecciona primero el tipo de examen")}
+                </Text>
+                <ChevronDown size={20} color={examType ? colors.subtitle : "#94a3b8"} />
+              </Pressable>
             </View>
 
             {/* Modo de Examen */}
@@ -720,6 +808,13 @@ export default function SimulacreGeneratorScreen() {
                   />
                 </View>
 
+                {renderBulkSelectionActions(
+                  filteredAreas.length > 0,
+                  areaIds.length > 0,
+                  selectAllAreas,
+                  clearArea
+                )}
+
                 <FlatList
                   data={filteredAreas}
                   renderItem={renderAreaItem}
@@ -767,6 +862,13 @@ export default function SimulacreGeneratorScreen() {
                     onChangeText={setSpecialtySearch}
                   />
                 </View>
+
+                {renderBulkSelectionActions(
+                  filteredSpecialties.length > 0,
+                  specialtyIds.length > 0,
+                  selectAllSpecialties,
+                  clearSpecialty
+                )}
 
                 <FlatList
                   data={filteredSpecialties}
@@ -816,6 +918,13 @@ export default function SimulacreGeneratorScreen() {
                   />
                 </View>
 
+                {renderBulkSelectionActions(
+                  filteredThemes.length > 0,
+                  themeIds.length > 0,
+                  selectAllThemes,
+                  clearTheme
+                )}
+
                 <FlatList
                   data={filteredThemes}
                   renderItem={renderThemeItem}
@@ -863,6 +972,13 @@ export default function SimulacreGeneratorScreen() {
                     onChangeText={setYearsSearch}
                   />
                 </View>
+
+                {renderBulkSelectionActions(
+                  filteredYears.length > 0,
+                  selectedYears.length > 0,
+                  selectAllYears,
+                  () => setSelectedYears([])
+                )}
 
                 <FlatList
                   data={filteredYears}
@@ -989,9 +1105,9 @@ export default function SimulacreGeneratorScreen() {
               if (!examType || !isQuestionCountValid) return;
               setIsCreatingExam(true);
               const requestBody = {
-                area: areaId ?? undefined,
-                specialty: specialtyId ?? undefined,
-                theme: themeId ?? undefined,
+                area: areaIds.length ? areaIds : undefined,
+                specialty: specialtyIds.length ? specialtyIds : undefined,
+                theme: themeIds.length ? themeIds : undefined,
                 year: selectedYears.length > 0 ? selectedYears : undefined,
                 exam: examType,
                 count: questionCount,
@@ -1008,7 +1124,7 @@ export default function SimulacreGeneratorScreen() {
                   const examRes = await createExam({
                     exam_type: "simulation",
                     title: `Simulacro - ${examType}`,
-                    description: `${specialty || "General"} (${questions.length} preguntas)`,
+                    description: `${selectedSpecialties.map((item) => item.name).join(", ") || "General"} (${questions.length} preguntas)`,
                     total_questions: questions.length,
                     started_at: new Date().toISOString(),
                   }).unwrap();
@@ -1022,10 +1138,10 @@ export default function SimulacreGeneratorScreen() {
                   params: {
                     examId: createdExamId,
                     examType,
-                    area: area || undefined,
-                    specialty: specialty || undefined,
-                    theme: theme || undefined,
-                    years: years || undefined,
+                    area: selectedAreas.map((item) => item.name).join(", ") || undefined,
+                    specialty: selectedSpecialties.map((item) => item.name).join(", ") || undefined,
+                    theme: selectedThemes.map((item) => item.name).join(", ") || undefined,
+                    years: selectedYears.length ? selectedYears.join(", ") : undefined,
                     questionCount: questionCount.toString(),
                     timeLimit: timeLimit.toString(),
                     examMode,
@@ -1035,6 +1151,7 @@ export default function SimulacreGeneratorScreen() {
                 });
               } catch (error) {
                 console.error('Error fetching questions:', error);
+                Alert.alert("Error al generar simulacro", parseApiError(error, "No se pudieron obtener las preguntas. Inténtalo nuevamente."));
                 setIsCreatingExam(false);
               }
             }}

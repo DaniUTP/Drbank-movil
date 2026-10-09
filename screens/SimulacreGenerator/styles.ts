@@ -160,6 +160,29 @@ export const styles = StyleSheet.create({
     padding: 0,
   },
 
+  selectionActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+
+  selectionAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+  },
+
+  selectionActionDisabled: {
+    opacity: 0.5,
+  },
+
+  selectionActionText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
   optionItem: {
     flexDirection: "row",
     justifyContent: "space-between",

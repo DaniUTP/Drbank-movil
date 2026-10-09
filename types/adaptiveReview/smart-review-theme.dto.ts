@@ -212,16 +212,6 @@ export interface CompleteSmartReviewPretestRequestDTO {
 export interface CompleteSmartReviewPretestResponseDTO {
   status: boolean;
   message: string;
-  data: {
-    id_exam: number;
-    uuid: string;
-    id_study_block: number;
-    exam_type: string;
-    score_percentage: number;
-    processing_status: string;
-    pretest_completed_at: string;
-    posttest_available_at: string;
-  };
 }
 
 export interface CompleteSmartReviewRequestDTO {

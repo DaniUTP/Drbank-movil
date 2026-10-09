@@ -34,8 +34,6 @@ export const studentSlice = api.injectEndpoints({
                 method: 'POST',
                 url: '/student/academic-advisores',
                 body,
-                // Make/ngrok usually needs about 30 seconds locally. Keep a
-                // finite margin without leaving the UI waiting for minutes.
                 timeout: 45000,
             }),
         }),

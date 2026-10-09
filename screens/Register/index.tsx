@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { parseApiError } from "../../utils/parseApiError";
 import React, { useCallback, useMemo, useState } from "react";
 import {
     Keyboard,
@@ -161,7 +162,7 @@ function RegisterScreen() {
       } else {
         // Handle general error
         setErrors({
-          email: error?.data?.message || "Error al registrar usuario",
+          email: parseApiError(error, "Error al registrar usuario"),
         });
       }
     } finally {

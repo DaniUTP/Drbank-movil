@@ -15,6 +15,7 @@ import type { SmartReviewDifficulty, SmartReviewExamResultDTO, SmartReviewPretes
 import type { ExamDetailDTO } from "@/types/question/exam.dto";
 import type { HistoryRequestDTO } from "@/types/question/history.dto";
 import { parseDistractorText } from "@/utils/distractorParser";
+import { parseApiError } from "@/utils/parseApiError";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AlertTriangle, ArrowLeft, Award, BookOpenCheck, CalendarClock, Check, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, ClipboardCheck, Clock, Frown, GraduationCap, HelpCircle, Layers3, Meh, Plus, RotateCcw, Search, Smile, Sparkles, Stethoscope, Target, Trash2, Trophy, X, XCircle } from "lucide-react-native";
@@ -254,8 +255,8 @@ export default function AdaptiveReviewScreen() {
         setSelectedStudyBlockId(undefined);
         setMode("welcome");
       }
-    } catch {
-      Alert.alert("No pudimos eliminar el plan", "Inténtalo nuevamente en unos momentos.");
+    } catch (err) {
+      Alert.alert("No pudimos eliminar el plan", parseApiError(err, "Inténtalo nuevamente en unos momentos."));
     }
   };
   const openPendingReviews = () => {
@@ -280,7 +281,7 @@ export default function AdaptiveReviewScreen() {
     { skip: !examType }
   );
   const { currentData: specialtiesData = [], isLoading: specialtiesLoading, isFetching: specialtiesFetching } = useSpecialtyQuery(
-    { exam: examType?.label ?? "", area: area ? Number(area.id) : 0 },
+    { exam: examType?.label ?? "", area: area ? [Number(area.id)] : [0] },
     { skip: !examType || !area }
   );
   const { currentData: smartThemesData = [], isLoading: themesLoading, isFetching: themesFetching, isError: themesError, refetch: refetchThemes } = useSmartReviewThemesQuery(
@@ -381,9 +382,10 @@ export default function AdaptiveReviewScreen() {
       setMode("pretest");
     } catch (error) {
       console.error("[SmartReview] No se pudo preparar el pretest", error);
-      setPlanError(id
+      setPlanError(parseApiError(error, id
         ? "El bloque fue creado, pero no pudimos preparar la evaluación inicial. Inténtalo nuevamente."
-        : "No pudimos crear tu bloque de repaso adaptativo. Inténtalo nuevamente.");
+        : "No pudimos crear tu bloque de repaso adaptativo. Inténtalo nuevamente."));
+      setMode("plan");
     }
   };
   const submitPretest = useCallback(async (answers: Record<number, { answer: string; difficulty?: SmartReviewDifficulty }>) => {
@@ -507,7 +509,7 @@ export default function AdaptiveReviewScreen() {
           })),
         },
       }).unwrap();
-      const serverScore = Number(response.data?.score_percentage ?? 0);
+      const serverScore = Number((response as any)?.data?.score_percentage ?? scorePercentage);
       const serverCorrectAnswers = Math.round((serverScore / 100) * pretestQuestions.length);
       setCompletedSummary({
         score: serverScore,
@@ -521,7 +523,7 @@ export default function AdaptiveReviewScreen() {
       setMode("completed");
     } catch (err) {
       console.error("[SmartReview] Error submitting pretest:", err);
-      setPretestSubmitError(isPosttestExam ? "No pudimos enviar tu evaluación de progreso. Inténtalo nuevamente." : isReviewExam ? "No pudimos enviar tu repaso. Inténtalo nuevamente." : "No pudimos enviar tu evaluación inicial. Inténtalo nuevamente.");
+      setPretestSubmitError(parseApiError(err, isPosttestExam ? "No pudimos enviar tu evaluación de progreso. Inténtalo nuevamente." : isReviewExam ? "No pudimos enviar tu repaso. Inténtalo nuevamente." : "No pudimos enviar tu evaluación inicial. Inténtalo nuevamente."));
     } finally {
       submissionInProgressRef.current = false;
       setSubmissionInProgress(false);
@@ -688,7 +690,7 @@ export default function AdaptiveReviewScreen() {
         setMode("pretest");
       } catch (error) {
         console.warn("[SmartReview] No se pudo reanudar el pretest después de reintentar", error);
-        setPlanError("No pudimos generar tu evaluación inicial. Inténtalo nuevamente.");
+        setPlanError(parseApiError(error, "No pudimos generar tu evaluación inicial. Inténtalo nuevamente."));
         setMode("plan");
       }
     })();
@@ -718,7 +720,7 @@ export default function AdaptiveReviewScreen() {
         setMode("pretest");
       } catch (error) {
         console.warn("[SmartReview] No se pudo generar el posttest", error);
-        setPlanError("No pudimos generar tu evaluación de progreso. Inténtalo nuevamente.");
+        setPlanError(parseApiError(error, "No pudimos generar tu evaluación de progreso. Inténtalo nuevamente."));
         router.back();
       }
     })();

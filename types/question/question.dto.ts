@@ -1,10 +1,11 @@
 export interface QuestionRequestDTO{
-    area?:number;
-    specialty?:number;
-    theme?:string;
+    id?: string;
+    area?:number[];
+    specialty?:number[];
+    theme?:string[];
     year?:string[];
-    exam:string;
-    count:number;
+    exam?:string;
+    count?:number;
 }
 export interface QuestionResponseDTO{
     specialtyId:number;
@@ -28,25 +29,6 @@ export interface QuestionOptionResponseDTO{
     option:string;
 }
 
-export interface QuestionByYearRequestDTO{
-  year:string;
-  exam:string;
-}
-export interface QuestionByYearResponseDTO{
-    specialtyId:number;
-    questionId:number;
-    theme:string;
-    specialty:string;
-    question:string;
-    image:string;
-    comment:string;
-    image_comment:string;
-    options:QuestionOptionResponseDTO[];
-    data:string;
-    justification:string;
-    distractorAnalysis:string;
-    reference:string;
-}
 export interface QuestionByThemeRequestDTO{
     id:string;
 }

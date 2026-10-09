@@ -144,8 +144,14 @@ function DashboardScreenComponent() {
   const isDashboardFocused = useIsFocused();
   const [pressedCard, setPressedCard] = useState<string | null>(null);
   const [dismissedSmartReviewNotices, setDismissedSmartReviewNotices] = useState<string[]>([]);
+  const [isCalendarLoading, setIsCalendarLoading] = useState(false);
   const [logoutMutation] = useLogoutMutation();
-  const [loadSmartReviewBlocks, { data: smartReviewBlocksData, isLoading: isSmartReviewBlocksLoading, isFetching: isSmartReviewBlocksFetching }] = useLazySmartReviewBlocksQuery();
+  const [loadSmartReviewBlocks, {
+    data: smartReviewBlocksData,
+    isLoading: isSmartReviewBlocksLoading,
+    isFetching: isSmartReviewBlocksFetching,
+    isError: isSmartReviewBlocksError,
+  }] = useLazySmartReviewBlocksQuery();
   const [loadSmartReviewDue, {
     data: smartReviewDueData,
     isLoading: isSmartReviewDueLoading,
@@ -157,20 +163,35 @@ function DashboardScreenComponent() {
     .map(block => block.id_study_block)
     .sort((first, second) => first - second), [smartReviewBlocksData]);
 
-  useEffect(() => {
+  const refreshStudyCalendar = useCallback(async () => {
     if (!isDashboardFocused) return;
-    void loadSmartReviewBlocks(undefined, false);
-  }, [isDashboardFocused, loadSmartReviewBlocks]);
+    setIsCalendarLoading(true);
+    try {
+      const blocksResponse = await loadSmartReviewBlocks(undefined, false).unwrap();
+      const blockIds = (blocksResponse.data.blocks ?? [])
+        .filter(block => Boolean(block.pretest_completed_at))
+        .map(block => block.id_study_block)
+        .sort((first, second) => first - second);
+      if (blockIds.length > 0) {
+        await loadSmartReviewDue(blockIds, false).unwrap();
+      }
+    } catch (error) {
+      console.error("Error loading study calendar:", error);
+    } finally {
+      setIsCalendarLoading(false);
+    }
+  }, [isDashboardFocused, loadSmartReviewBlocks, loadSmartReviewDue]);
 
   useEffect(() => {
-    if (!isDashboardFocused || reviewableSmartReviewBlockIds.length === 0) return;
-    void loadSmartReviewDue(reviewableSmartReviewBlockIds, false);
-  }, [isDashboardFocused, loadSmartReviewDue, reviewableSmartReviewBlockIds]);
+    void refreshStudyCalendar();
+  }, [refreshStudyCalendar]);
 
-  const isCalendarRefreshing = isSmartReviewBlocksLoading
+  const isCalendarRefreshing = isCalendarLoading
+    || isSmartReviewBlocksLoading
     || isSmartReviewBlocksFetching
     || Boolean(reviewableSmartReviewBlockIds.length > 0 && (isSmartReviewDueLoading || isSmartReviewDueFetching));
   const hasDueErrorForActiveBlock = Boolean(reviewableSmartReviewBlockIds.length > 0 && isSmartReviewDueError);
+  const hasCalendarError = isSmartReviewBlocksError || hasDueErrorForActiveBlock;
 
   const smartReviewNotices = useMemo(() => {
     const blocks = smartReviewBlocksData?.data?.blocks ?? [];
@@ -397,11 +418,11 @@ function DashboardScreenComponent() {
               <ActivityIndicator color="#0284c7" />
               <Text style={[styles.loadingText, { color: colors.subtitle }]}>Cargando calendario...</Text>
             </View>
-          ) : hasDueErrorForActiveBlock ? (
+          ) : hasCalendarError ? (
             <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.inputBorder }]}>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>No pudimos cargar tus revisiones</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No pudimos cargar el calendario</Text>
               <Text style={[styles.emptyText, { color: colors.subtitle }]}>Intenta actualizar nuevamente el calendario.</Text>
-              <Pressable disabled={reviewableSmartReviewBlockIds.length === 0} onPress={() => reviewableSmartReviewBlockIds.length > 0 && void loadSmartReviewDue(reviewableSmartReviewBlockIds, false)} style={styles.retryButton}>
+              <Pressable onPress={() => void refreshStudyCalendar()} style={styles.retryButton}>
                 <Text style={styles.retryButtonText}>Reintentar</Text>
               </Pressable>
             </View>

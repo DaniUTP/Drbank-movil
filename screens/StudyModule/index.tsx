@@ -1,10 +1,8 @@
 import { useLazyQuestionByThemeQuery } from "@/services/question/question.rtkq";
-import { useLazyStudentProgressQuery } from "@/services/studentProgress/student-progress.rtkq";
-import type { StudentProgressResponseDTO } from "@/types/studentProgress/student-progress.dto";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react-native";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Modal from "../../common/Modal";
@@ -23,63 +21,11 @@ export default function StudyModuleScreen() {
   const [showLoading, setShowLoading] = useState(false);
   const [videoStatus, setVideoStatus] = useState<"idle" | "loading" | "readyToPlay" | "error">("loading");
   const [hasVideoUrl, setHasVideoUrl] = useState(Boolean(params.videoUrl));
-  const [isRenewingVideo, setIsRenewingVideo] = useState(false);
   const [fetchQuestions] = useLazyQuestionByThemeQuery();
-  const [refreshProgress] = useLazyStudentProgressQuery();
-  const renewalAttemptedRef = useRef(false);
-  const renewalInProgressRef = useRef(false);
-  const friendlyVideoError = renewalAttemptedRef.current
-    ? "No se pudo renovar el acceso al video. Inténtalo nuevamente."
-    : "No fue posible reproducir este contenido. Inténtalo nuevamente más tarde.";
-  // Keep one player instance. Signed URLs are replaced imperatively so playback
-  // position can be restored and changing a URL cannot recreate retry state.
+  // Keep one player instance for the video URL received through navigation.
   const player = useVideoPlayer(null, (instance) => { instance.loop = false; });
 
-  const findTopicVideoUrl = useCallback((progress: StudentProgressResponseDTO) => {
-    if (!params.themeUuid) return null;
-    for (const calendarDay of progress.calendar ?? []) {
-      const topic = calendarDay.topics?.find(item => item.theme_uuid === params.themeUuid);
-      if (topic) return topic.video_url || null;
-    }
-    return null;
-  }, [params.themeUuid]);
-
-  const renewVideoAccess = useCallback(async () => {
-    if (!params.themeUuid || renewalInProgressRef.current) return false;
-    if (renewalAttemptedRef.current) return false;
-
-    renewalAttemptedRef.current = true;
-    renewalInProgressRef.current = true;
-    setIsRenewingVideo(true);
-    const previousPosition = player.currentTime;
-
-    try {
-      // preferCacheValue=false forces a new request and therefore a fresh signed URL.
-      const progress = await refreshProgress(undefined, false).unwrap();
-      const renewedUrl = findTopicVideoUrl(progress);
-      if (!renewedUrl) {
-        setHasVideoUrl(false);
-        setVideoStatus("error");
-        return false;
-      }
-
-      setHasVideoUrl(true);
-      setVideoStatus("loading");
-      await player.replaceAsync({ uri: renewedUrl, contentType: "progressive", useCaching: false });
-      if (previousPosition > 0) player.currentTime = previousPosition;
-      player.play();
-      return true;
-    } catch {
-      setVideoStatus("error");
-      return false;
-    } finally {
-      renewalInProgressRef.current = false;
-      setIsRenewingVideo(false);
-    }
-  }, [findTopicVideoUrl, params.themeUuid, player, refreshProgress]);
-
-  // Start with the exact signed URL received through navigation. It is renewed
-  // only if the video server rejects it with HTTP 401 or 403.
+  // Start with the exact signed URL received through navigation.
   useEffect(() => {
     if (!params.videoUrl) {
       setHasVideoUrl(false);
@@ -93,24 +39,20 @@ export default function StudyModuleScreen() {
   }, [params.videoUrl, player]);
 
   useEffect(() => {
-    if (!hasVideoUrl && !isRenewingVideo) {
+    if (!hasVideoUrl) {
       setVideoStatus("error");
       return undefined;
     }
     const endSubscription = player.addListener("playToEnd", () => setCompleted(true));
-    const statusSubscription = player.addListener("statusChange", ({ status, error }) => {
+    const statusSubscription = player.addListener("statusChange", ({ status }) => {
       setVideoStatus(status);
-      const errorMessage = error?.message ?? "";
-      if (status === "error" && /(?:401|403)/.test(errorMessage)) {
-        void renewVideoAccess();
-      }
     });
     setVideoStatus(player.status);
     return () => {
       endSubscription.remove();
       statusSubscription.remove();
     };
-  }, [hasVideoUrl, isRenewingVideo, player, renewVideoAccess]);
+  }, [hasVideoUrl, player]);
 
   const startPractice = async () => {
     if (!completed || !params.themeUuid) return;
@@ -146,11 +88,11 @@ export default function StudyModuleScreen() {
             surfaceType="textureView"
             fullscreenOptions={{ enable: true }}
           />
-          {(videoStatus === "loading" || videoStatus === "idle" || isRenewingVideo) && (
-            <View style={styles.playerOverlay}><ActivityIndicator size="large" color="#38bdf8" /><Text style={styles.playerOverlayText}>{isRenewingVideo ? "Renovando acceso..." : "Cargando video..."}</Text></View>
+          {(videoStatus === "loading" || videoStatus === "idle") && (
+            <View style={styles.playerOverlay}><ActivityIndicator size="large" color="#38bdf8" /><Text style={styles.playerOverlayText}>Cargando video...</Text></View>
           )}
           {videoStatus === "error" && (
-            <View style={styles.playerOverlay}><Text style={styles.playerErrorTitle}>Video no disponible</Text><Text style={styles.playerErrorText}>{friendlyVideoError}</Text></View>
+            <View style={styles.playerOverlay}><Text style={styles.playerErrorTitle}>Video no disponible</Text><Text style={styles.playerErrorText}>No fue posible reproducir este contenido. Inténtalo nuevamente más tarde.</Text></View>
           )}
         </View>
         <View style={styles.navigationActions}>

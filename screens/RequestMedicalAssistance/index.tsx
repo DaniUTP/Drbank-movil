@@ -46,6 +46,7 @@ import {
 } from "../../services/student/student.rtkq";
 import { AcademicAdvisoriesResponseDTO } from "../../types/student/student.dto";
 import { DoctorAvailabilitySlotDTO } from "../../types/doctor/doctor.dto";
+import { parseApiError } from "../../utils/parseApiError";
 
 LocaleConfig.locales["es"] = {
   monthNames: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"],
@@ -234,45 +235,7 @@ function formatCountdown(totalSeconds: number): string {
 }
 
 function getMeetingRequestErrorMessage(error: unknown): string {
-  if (!error || typeof error !== "object") {
-    return "No se recibió una respuesta válida del servidor.";
-  }
-
-  const requestError = error as {
-    status?: number | string;
-    data?: unknown;
-    error?: string;
-  };
-
-  if (typeof requestError.data === "string" && requestError.data.trim()) {
-    return requestError.data;
-  }
-
-  if (requestError.data && typeof requestError.data === "object") {
-    const response = requestError.data as {
-      message?: unknown;
-      error?: unknown;
-      errors?: Record<string, unknown>;
-    };
-    if (typeof response.message === "string" && response.message.trim()) return response.message;
-    if (typeof response.error === "string" && response.error.trim()) return response.error;
-    if (response.errors && typeof response.errors === "object") {
-      const validationMessages = Object.values(response.errors)
-        .flatMap((value) => Array.isArray(value) ? value : [value])
-        .filter((value): value is string => typeof value === "string" && !!value.trim());
-      if (validationMessages.length > 0) return validationMessages.join("\n");
-    }
-  }
-
-  if (requestError.status === "TIMEOUT_ERROR") {
-    return "La solicitud está tardando más de lo esperado. Verifica el servicio e inténtalo nuevamente.";
-  }
-
-  if (typeof requestError.error === "string" && requestError.error.trim()) {
-    return requestError.error;
-  }
-
-  return "No se pudo obtener el detalle del error enviado por el servidor.";
+  return parseApiError(error, "No se obtuvo una respuesta válida del servidor.");
 }
 
 function getMeetingRequestErrorTitle(error: unknown, conflictTitle: string): string {

@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { parseApiError } from "@/utils/parseApiError";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -125,7 +126,7 @@ export default function SupportScreen() {
                 message: result?.message || "Tu solicitud de soporte ha sido enviada con éxito. Nuestro equipo te responderá a la brevedad a tu correo electrónico.",
             });
         } catch (error: any) {
-            const errorMessage = error?.data?.message || error?.message || "No se pudo enviar la solicitud de soporte. Por favor verifica tu conexión e inténtalo nuevamente.";
+            const errorMessage = parseApiError(error, "No se pudo enviar la solicitud de soporte. Por favor verifica tu conexión e inténtalo nuevamente.");
             setResponseModal({
                 visible: true,
                 isSuccess: false,

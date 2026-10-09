@@ -13,7 +13,6 @@ import Modal from "../../common/Modal";
 import ThemeToggle from "../../common/ThemeToggle";
 import { useTheme } from "../../common/ThemeContext";
 import { useLazyQuestionByThemeQuery } from "../../services/question/question.rtkq";
-import { useStudentProgressQuery } from "../../services/studentProgress/student-progress.rtkq";
 import { useLazySmartReviewDueQuestionsQuery, useSmartReviewBlocksQuery, useSmartReviewDueQuery } from "../../services/adaptiveReview/smart-review.rtkq";
 import { styles } from "./styles";
 
@@ -40,7 +39,6 @@ export default function CalendarDetailScreen() {
   const { day, posttestBlockId, studyBlockId } = useLocalSearchParams();
   const parsedStudyBlockId = Number(Array.isArray(studyBlockId) ? studyBlockId[0] : studyBlockId);
   const hasStudyBlockId = Number.isInteger(parsedStudyBlockId) && parsedStudyBlockId > 0;
-  const { data: studentProgressData } = useStudentProgressQuery();
   const { data: smartReviewDueData, isLoading: smartReviewDueLoading, isFetching: smartReviewDueFetching, isError: smartReviewDueError, refetch: refetchSmartReviewDue } = useSmartReviewDueQuery(parsedStudyBlockId, { skip: !hasStudyBlockId, refetchOnMountOrArgChange: true });
   const { data: smartReviewBlocksData, isLoading: smartReviewBlocksLoading, refetch: refetchSmartReviewBlocks } = useSmartReviewBlocksQuery();
   const [fetchQuestionsByTheme] = useLazyQuestionByThemeQuery();
@@ -76,11 +74,8 @@ export default function CalendarDetailScreen() {
   const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-  // Find the selected day data from API
-  const selectedDayData = useMemo(() => {
-    if (!studentProgressData?.calendar || !day) return null;
-    return studentProgressData.calendar.find((d: any) => d.date === day);
-  }, [studentProgressData, day]);
+  // Student progress is no longer loaded from the removed progress endpoint.
+  const selectedDayData: any = null;
   const selectedDate = typeof day === "string" ? day : "";
   const selectedReviews = useMemo(() => (smartReviewDueData?.data?.reviews ?? []).filter(review => review.scheduled_for === selectedDate), [selectedDate, smartReviewDueData]);
   const reviewsByTheme = useMemo(() => {

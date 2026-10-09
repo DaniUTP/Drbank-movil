@@ -6,10 +6,10 @@ export const areaSlice = api.injectEndpoints({
     endpoints: builder => ({
         area: builder.query<AreaResponseDTO[], AreaRequestDTO>({
             providesTags: [TagTypes.Area],
-            query: (params) => ({
+            query: (body) => ({
                 url: '/quiz/area',
-                method: 'GET',
-                params,
+                method: 'POST',
+                body,
             }),
         })
     })

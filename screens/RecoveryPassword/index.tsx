@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { parseApiError } from "../../utils/parseApiError";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Pressable,
@@ -52,7 +53,7 @@ function RecoveryPasswordScreen() {
         () => router.replace("/login")
       );
     } catch (err: any) {
-      setError(err?.data?.message || "Error al enviar correo de recuperación");
+      setError(parseApiError(err, "Error al enviar correo de recuperación"));
     } finally {
       setIsLoading(false);
     }

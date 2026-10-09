@@ -17,7 +17,6 @@ import { styles } from "./styles";
 import { useUpdateExamStatusMutation } from "@/services/question/exam.rtkq";
 import { useHistoryMutation } from "@/services/question/history.rtkq";
 import { useSaveRankingMutation } from "@/services/question/ranking.rtkq";
-import { useMarkStudiedMutation } from "@/services/studentProgress/student-progress.rtkq";
 import { UpdateExamStatusRequestDTO } from "@/types/question/exam.dto";
 import { HistoryRequestDTO } from "@/types/question/history.dto";
 import { parseDistractorText } from "@/utils/distractorParser";
@@ -138,7 +137,6 @@ export default function QuestionsScreen() {
   const [triggerHistory] = useHistoryMutation();
   const [updateExamStatus] = useUpdateExamStatusMutation();
   const [saveRanking] = useSaveRankingMutation();
-  const [markStudied] = useMarkStudiedMutation();
   const startTimeRef = useRef<string>(new Date().toISOString());
 
   // State
@@ -376,15 +374,6 @@ export default function QuestionsScreen() {
         saveRanking({ points: results.correct }).unwrap(),
       ]);
       
-      // Call markStudied API only if exam comes from calendar (fromCalendar === true)
-      if (fromCalendar && themeUuid) {
-        try {
-          await markStudied({ theme_uuid: themeUuid }).unwrap();
-        } catch (error) {
-          console.error("Error marking topic as studied:", error);
-          // Don't block navigation if markStudied fails
-        }
-      }
     } catch (error) {
       console.error("Error submitting quiz history or update exam status API:", error);
     } finally {
@@ -411,7 +400,7 @@ export default function QuestionsScreen() {
         questions: JSON.stringify(activeQuestions),
       },
     });
-  }, [selectedAnswers, transformedQuestions, totalQuestions, timeLimit, timeRemaining, examId, triggerHistory, updateExamStatus, saveRanking, markStudied, themeUuid, fromCalendar, formattedExamType, examType, area, specialty, theme, years, examMode, questionCount, router]);
+  }, [selectedAnswers, transformedQuestions, totalQuestions, timeLimit, timeRemaining, examId, triggerHistory, updateExamStatus, saveRanking, themeUuid, fromCalendar, formattedExamType, examType, area, specialty, theme, years, examMode, questionCount, router]);
 
   // Timer effect
   useEffect(() => {

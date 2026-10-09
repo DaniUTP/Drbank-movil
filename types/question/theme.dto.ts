@@ -1,7 +1,7 @@
 export interface ThemeRequestDTO{
-    specialty:number;
+    specialty:number[];
     exam:string;
-    area?:number;
+    area:number[];
     year?:string[];
 }
 export interface ThemeResponseDTO{

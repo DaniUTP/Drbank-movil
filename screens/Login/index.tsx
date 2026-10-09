@@ -3,6 +3,7 @@ import { useLoginMutation } from "@/services/auth/login.rtkq";
 import { api } from "@/store/api";
 import type { AppDispatch } from "@/store";
 import { validateLoginForm } from "@/utils/login/validation";
+import { parseApiError } from "@/utils/parseApiError";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useDispatch } from "react-redux";
@@ -109,14 +110,16 @@ export function LoginScreen() {
       }
       
       if (error?.data?.errors) {
-        const backendErrors = error.data.errors as { [key: string]: string };
+        const backendErrors = error.data.errors as { [key: string]: string | string[] };
+        const emailErr = Array.isArray(backendErrors.email) ? backendErrors.email.join(", ") : backendErrors.email;
+        const passErr = Array.isArray(backendErrors.password) ? backendErrors.password.join(", ") : backendErrors.password;
         setErrors({
-          email: backendErrors.email,
-          password: backendErrors.password,
+          email: emailErr || (!passErr ? parseApiError(error, 'Error al iniciar sesión') : undefined),
+          password: passErr,
         });
       } else {
         setErrors({
-          email: error?.data?.message || 'Error al iniciar sesión',
+          email: parseApiError(error, 'Error al iniciar sesión'),
         });
       }
     } finally {

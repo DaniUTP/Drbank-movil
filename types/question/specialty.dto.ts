@@ -1,5 +1,5 @@
 export interface SpecialtyRequestDTO{
-    area:number;
+    area:number[];
     exam:string;
     year?:string[];
 }

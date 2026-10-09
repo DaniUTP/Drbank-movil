@@ -6,10 +6,10 @@ export const specialtySlice = api.injectEndpoints({
     endpoints: builder => ({
         specialty: builder.query<SpecialtyResponseDTO[], SpecialtyRequestDTO>({
             providesTags: [TagTypes.Specialty],
-            query: (params) => ({
+            query: (body) => ({
                 url: '/quiz/specialty',
-                method: 'GET',
-                params
+                method: 'POST',
+                body
             }),
         })
     })

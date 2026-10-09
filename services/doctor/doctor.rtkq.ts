@@ -3,8 +3,6 @@ import { TagTypes } from "@/store/constants/tagTypes.constants";
 import { DoctorAvailabilityRequestDTO, DoctorAvailabilityResponseDTO, DoctorResponseDTO } from "@/types/doctor/doctor.dto";
 
 export const doctorSlice = api.injectEndpoints({
-    // Fast Refresh can retain an older, partially registered endpoint definition.
-    // Replace it with the current definition whenever this module is reloaded.
     overrideExisting: true,
     endpoints: builder => ({
         doctor: builder.query<DoctorResponseDTO[], void>({

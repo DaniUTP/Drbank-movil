@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../common/ThemeContext";
 import { useActivateAccountMutation, useResendActivationMutation } from "../../services/auth/activate-account.rtkq";
+import { parseApiError } from "../../utils/parseApiError";
 import { styles } from "./styles";
 
 // ============================================
@@ -80,7 +81,7 @@ function ActivateAccountScreen() {
       router.replace("/login");
     } catch (err: any) {
       // Show API error message
-      setError(err?.data?.message || err?.data?.error || "Código inválido");
+      setError(parseApiError(err, "Código inválido"));
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +108,7 @@ function ActivateAccountScreen() {
       );
     } catch (err: any) {
       // Show API error message
-      setError(err?.data?.message || err?.data?.error || "Error al reenviar código");
+      setError(parseApiError(err, "Error al reenviar código"));
     } finally {
       setIsResending(false);
     }

@@ -6,11 +6,14 @@ export const themeSlice = api.injectEndpoints({
     endpoints: builder => ({
         theme: builder.query<ThemeResponseDTO[], ThemeRequestDTO>({
             providesTags: [TagTypes.Theme],
-            query: (params) => ({
-                url: '/quiz/theme',
-                method: 'GET',
-                params
-            }),
+            query: (body) => {
+                console.log("Theme API request:", body);
+                return {
+                    url: '/quiz/theme',
+                    method: 'POST',
+                    body
+                };
+            },
         })
     })
 });

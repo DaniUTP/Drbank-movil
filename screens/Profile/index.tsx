@@ -1,4 +1,5 @@
 import { useLazyChangePasswordQuery } from "@/services/profile/change-password.rtkq";
+import { parseApiError } from "@/utils/parseApiError";
 import { useProfileQuery, useUpdateProfileMutation } from "@/services/profile/profile.rtkq";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -152,7 +153,7 @@ export default function ProfileScreen() {
             setShowConfirmPassword(false);
         } catch (err: any) {
             const message = err?.data?.message || err?.message || "Error al cambiar la contraseña. Verifica tu contraseña actual.";
-            setPasswordError(message);
+            setPasswordError(parseApiError(err, "Error al cambiar la contraseña. Verifica tu contraseña actual."));
         }
     }, [formData, triggerChangePassword]);
 
@@ -187,7 +188,7 @@ export default function ProfileScreen() {
             });
         } catch (err: any) {
             const message = err?.data?.message || err?.message || "Error al actualizar el perfil.";
-            setProfileError(message);
+            setProfileError(parseApiError(err, "Error al actualizar el perfil."));
         }
     }, [formData, updateProfile]);
     
